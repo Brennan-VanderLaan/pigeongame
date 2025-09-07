@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Bazel wrapper script that falls back to dependency checking if bazel is not found
+# Works on Unix-like systems and Windows (via MSYS2/Git Bash)
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CANARY_SCRIPT="$SCRIPT_DIR/canary.sh"
+
+# Function to run the canary script
+run_canary() {
+    echo "Bazel not found or failed. Running dependency check..." >&2
+    if [[ -f "$CANARY_SCRIPT" ]]; then
+        bash "$CANARY_SCRIPT"
+    else
+        echo "Error: Canary script not found at $CANARY_SCRIPT" >&2
+        echo "Please ensure tools/canary.sh exists" >&2
+        exit 1
+    fi
+}
+
+# Check if we should use a specific bazel binary (BAZEL_REAL environment variable)
+if [[ -n "${BAZEL_REAL:-}" ]]; then
+    # Use the specified bazel binary
+    BAZEL_CMD="$BAZEL_REAL"
+elif command -v bazel >/dev/null 2>&1; then
+    # Use bazel from PATH
+    BAZEL_CMD="bazel"
+else
+    # Bazel not found, run canary and exit
+    run_canary
+    exit 1
+fi
+
+# Try to run bazel with all provided arguments
+if ! "$BAZEL_CMD" "$@"; then
+    # If bazel command failed, run canary to help diagnose issues
+    echo "" >&2
+    echo "Bazel command failed. Running dependency check to help diagnose issues..." >&2
+    run_canary
+    exit 1
+fi
