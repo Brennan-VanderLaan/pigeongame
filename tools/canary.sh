@@ -48,83 +48,104 @@ check_command() {
     fi
 }
 
-# Function to provide installation guidance
-provide_guidance() {
+# Function to get version from tool canary script
+get_tool_version() {
     local tool="$1"
-    local os="$2"
+    local canary_script="tools/canaries/$tool/check.sh"
     
-    echo "${YELLOW}Installation guidance for $tool:${RESET}"
+    if [[ ! -f "$canary_script" ]]; then
+        echo "unknown"
+        return 1
+    fi
     
-    case "$tool" in
-        "bazel")
-            case "$os" in
-                "linux")
-                    echo "  • Ubuntu/Debian: sudo apt install bazel"
-                    echo "  • Or download from: https://github.com/bazelbuild/bazelisk/releases"
-                    ;;
-                "macos")
-                    echo "  • Homebrew: brew install bazelisk"
-                    echo "  • Or download from: https://github.com/bazelbuild/bazelisk/releases"
-                    ;;
-                "windows")
-                    echo "  • Chocolatey: choco install bazelisk"
-                    echo "  • Scoop: scoop install bazelisk"
-                    echo "  • Or download from: https://github.com/bazelbuild/bazelisk"
-                    ;;
-                *)
-                    echo "  • Try to use bazelisk - it will make your life easier"
-                    echo "  • Download from: https://github.com/bazelbuild/bazel/releases"
-                    ;;
-            esac
-            ;;
-        "tofu")
-            case "$os" in
-                "linux")
-                    echo "  • Download from: https://github.com/opentofu/opentofu/releases"
-                    echo "  • Or use package manager if available"
-                    ;;
-                "macos")
-                    echo "  • Homebrew: brew install opentofu"
-                    echo "  • Or download from: https://github.com/opentofu/opentofu/releases"
-                    ;;
-                "windows")
-                    echo "  • Chocolatey: choco install opentofu"
-                    echo "  • Or download from: https://github.com/opentofu/opentofu/releases"
-                    ;;
-                *)
-                    echo "  • Download from: https://github.com/opentofu/opentofu/releases"
-                    ;;
-            esac
-            ;;
-        *)
-            echo "  • Please check the official documentation for $tool"
-            ;;
-    esac
-    echo ""
+    # Source the script and call get_version function if it exists
+    (
+        source "$canary_script" 2>/dev/null
+        if declare -f "get_${tool}_version" >/dev/null 2>&1; then
+            "get_${tool}_version" 2>/dev/null || echo "unknown"
+        else
+            echo "unknown"
+        fi
+    )
+}
+
+# Function to run tool-specific canary checks
+run_canary_check() {
+    local tool="$1"
+    local show_version="${2:-false}"
+    local canary_script="tools/canaries/$tool/check.sh"
+    
+    if [[ ! -f "$canary_script" ]]; then
+        echo "${RED}✗${RESET} Canary script not found: $canary_script"
+        return 1
+    fi
+    
+    # Execute the check script directly
+    if "$canary_script"; then
+        if [[ "$show_version" == "true" ]]; then
+            local version
+            version=$(get_tool_version "$tool")
+            echo "${GREEN}✓${RESET} $tool is available (version: $version)"
+        else
+            echo "${GREEN}✓${RESET} $tool is available"
+        fi
+        return 0
+    else
+        echo "${RED}✗${RESET} $tool is not found"
+        # Source the script temporarily to get access to the guidance function
+        (
+            source "$canary_script"
+            echo "${YELLOW}Installation guidance for $tool:${RESET}"
+            provide_guidance "$(detect_os)"
+        )
+        echo ""
+        return 1
+    fi
+}
+
+# Function to auto-discover tools from canaries directory
+discover_tools() {
+    local canaries_dir="tools/canaries"
+    local tools=()
+    
+    if [[ ! -d "$canaries_dir" ]]; then
+        echo "${RED}✗${RESET} Canaries directory not found: $canaries_dir"
+        return 1
+    fi
+    
+    # Find all directories in canaries/ that contain a check.sh script
+    for tool_dir in "$canaries_dir"/*; do
+        if [[ -d "$tool_dir" && -f "$tool_dir/check.sh" ]]; then
+            local tool_name=$(basename "$tool_dir")
+            tools+=("$tool_name")
+        fi
+    done
+    
+    # Sort tools alphabetically for consistent output
+    IFS=$'\n' tools=($(sort <<<"${tools[*]}"))
+    unset IFS
+    
+    printf '%s\n' "${tools[@]}"
 }
 
 # Main dependency checking function
 check_dependencies() {
-    local os
-    os=$(detect_os)
-    
+    local show_versions="${1:-false}"
     echo "${BLUE}Checking dependencies...${RESET}"
     echo ""
     
-    # Define dependencies to check
-    # Format: "command:display_name" or just "command" if they're the same
-    local deps=(
-        "bazel"
-        "tofu:OpenTofu"
-    )
+    # Auto-discover tools from canaries directory
+    local tools
+    mapfile -t tools < <(discover_tools)
     
-    for dep in "${deps[@]}"; do
-        IFS=':' read -r cmd display_name <<< "$dep"
-        display_name="${display_name:-$cmd}"
-        
-        if ! check_command "$cmd" "$display_name"; then
+    if [[ ${#tools[@]} -eq 0 ]]; then
+        echo "${YELLOW}No canary checks found in tools/canaries/${RESET}"
+        return 0
+    fi
+    
+    for tool in "${tools[@]}"; do
+        if ! run_canary_check "$tool" "$show_versions"; then
             ((MISSING_DEPS++))
-            provide_guidance "$cmd" "$os"
         fi
     done
     
@@ -138,13 +159,81 @@ check_dependencies() {
     fi
 }
 
-# Function to add new dependency checks (for future expansion)
-add_dependency_check() {
-    local cmd="$1"
-    local display_name="${2:-$cmd}"
+# Function to process template file by replacing placeholders
+process_template() {
+    local template_file="$1"
+    local tool="$2"
+    local output_file="$3"
     
-    echo "# To add a new dependency check, add it to the deps array in check_dependencies()"
-    echo "# Example: deps+=(\"$cmd:$display_name\")"
+    if [[ ! -f "$template_file" ]]; then
+        echo "${RED}Error: Template file not found: $template_file${RESET}" >&2
+        return 1
+    fi
+    
+    # Replace {{TOOL}} placeholder with actual tool name
+    sed "s/{{TOOL}}/$tool/g" "$template_file" > "$output_file"
+}
+
+# Function to create a new canary check
+create_canary_check() {
+    local tool="$1"
+    local canary_dir="tools/canaries/$tool"
+    local template_dir="tools/canaries.template"
+    
+    if [[ -z "$tool" ]]; then
+        echo "${RED}Error: Tool name is required${RESET}" >&2
+        echo "Usage: $0 --add-canary TOOLNAME" >&2
+        return 1
+    fi
+    
+    # Validate tool name (alphanumeric, hyphens, underscores only)
+    if [[ ! "$tool" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "${RED}Error: Invalid tool name '$tool'. Use only alphanumeric characters, hyphens, and underscores.${RESET}" >&2
+        return 1
+    fi
+    
+    # Check if template directory exists
+    if [[ ! -d "$template_dir" ]]; then
+        echo "${RED}Error: Template directory not found: $template_dir${RESET}" >&2
+        return 1
+    fi
+    
+    if [[ -d "$canary_dir" ]]; then
+        echo "${YELLOW}Warning: Canary check for '$tool' already exists at $canary_dir${RESET}"
+        echo "Overwrite? (y/N): "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            echo "Cancelled."
+            return 1
+        fi
+    fi
+    
+    # Create directory
+    mkdir -p "$canary_dir"
+    
+    # Create check.sh from template
+    echo "${BLUE}Creating $canary_dir/check.sh...${RESET}"
+    if ! process_template "$template_dir/check.sh.template" "$tool" "$canary_dir/check.sh"; then
+        echo "${RED}Error: Failed to create check.sh from template${RESET}" >&2
+        return 1
+    fi
+    chmod +x "$canary_dir/check.sh"
+    
+    # Create README.md from template
+    echo "${BLUE}Creating $canary_dir/README.md...${RESET}"
+    if ! process_template "$template_dir/README.md.template" "$tool" "$canary_dir/README.md"; then
+        echo "${RED}Error: Failed to create README.md from template${RESET}" >&2
+        return 1
+    fi
+    
+    echo "${GREEN}✓ Canary check for '$tool' created successfully!${RESET}"
+    echo ""
+    echo "Next steps:"
+    echo "1. Edit $canary_dir/README.md to add proper description and documentation"
+    echo "2. Update $canary_dir/check.sh if needed (default checks for '$tool' command in PATH)"
+    echo "3. The canary will be automatically discovered on next run"
+    
+    return 0
 }
 
 # Show usage information
@@ -152,17 +241,23 @@ show_usage() {
     echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
-    echo "  -h, --help     Show this help message"
-    echo "  -q, --quiet    Suppress informational output"
+    echo "  -h, --help              Show this help message"
+    echo "  -q, --quiet             Suppress informational output"
+    echo "  -v, --versions          Show version information for available tools"
+    echo "  --add-canary TOOLNAME   Create a new canary check for the specified tool"
     echo ""
     echo "This script checks for required dependencies and provides installation guidance."
+    echo "Dependencies are automatically discovered from tools/canaries/ directory."
+    echo ""
     echo "Exit codes:"
-    echo "  0 - All dependencies satisfied"
-    echo "  1 - One or more dependencies missing"
+    echo "  0 - All dependencies satisfied (or canary successfully created)"
+    echo "  1 - One or more dependencies missing (or error creating canary)"
 }
 
 # Parse command line arguments
 QUIET=false
+SHOW_VERSIONS=false
+ADD_CANARY=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)
@@ -173,6 +268,19 @@ while [[ $# -gt 0 ]]; do
             QUIET=true
             shift
             ;;
+        -v|--versions)
+            SHOW_VERSIONS=true
+            shift
+            ;;
+        --add-canary)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --add-canary requires a tool name" >&2
+                show_usage >&2
+                exit 1
+            fi
+            ADD_CANARY="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1" >&2
             show_usage >&2
@@ -182,9 +290,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Main execution
-if [[ "$QUIET" == "false" ]]; then
-    check_dependencies
+if [[ -n "$ADD_CANARY" ]]; then
+    # Create new canary check
+    create_canary_check "$ADD_CANARY"
 else
-    check_dependencies >/dev/null 2>&1
+    # Run dependency checks
+    if [[ "$QUIET" == "false" ]]; then
+        check_dependencies "$SHOW_VERSIONS"
+    else
+        check_dependencies "$SHOW_VERSIONS" >/dev/null 2>&1
+    fi
 fi
 

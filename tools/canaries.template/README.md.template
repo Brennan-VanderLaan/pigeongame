@@ -1,0 +1,15 @@
+# {{TOOL}} Canary Check
+
+This directory contains the canary check for [{{TOOL}}](https://example.com/), a TODO: brief description.
+
+## What it does
+
+TODO: Describe what {{TOOL}} does and why it might be needed in your development workflow.
+
+## Check script
+
+The `check.sh` script verifies that `{{TOOL}}` command is available in the system PATH and provides installation guidance if not found.
+
+## Additional Notes
+
+TODO: Add any additional information about {{TOOL}} usage, configuration, or special considerations.

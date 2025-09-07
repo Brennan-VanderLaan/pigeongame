@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# {{TOOL}} canary check
+
+set -euo pipefail
+
+check_{{TOOL}}() {
+    if command -v {{TOOL}} >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+get_{{TOOL}}_version() {
+    if command -v {{TOOL}} >/dev/null 2>&1; then
+        # Common version flag patterns - adjust as needed for specific tools
+        if {{TOOL}} --version >/dev/null 2>&1; then
+            {{TOOL}} --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)*' | head -1
+        elif {{TOOL}} -v >/dev/null 2>&1; then
+            {{TOOL}} -v 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)*' | head -1
+        elif {{TOOL}} version >/dev/null 2>&1; then
+            {{TOOL}} version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)*' | head -1
+        else
+            echo "unknown"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+provide_guidance() {
+    local os="$1"
+    
+    echo "Installation guidance for {{TOOL}}:"
+    
+    case "$os" in
+        "linux")
+            echo "  • Please check the official documentation for {{TOOL}}"
+            echo "  • Or search for packages: apt search {{TOOL}} / yum search {{TOOL}}"
+            ;;
+        "macos")
+            echo "  • Homebrew: brew install {{TOOL}}"
+            echo "  • Or check the official documentation for {{TOOL}}"
+            ;;
+        "windows")
+            echo "  • Chocolatey: choco install {{TOOL}}"
+            echo "  • Scoop: scoop install {{TOOL}}"
+            echo "  • Or check the official documentation for {{TOOL}}"
+            ;;
+        *)
+            echo "  • Please check the official documentation for {{TOOL}}"
+            ;;
+    esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    check_{{TOOL}}
+fi
