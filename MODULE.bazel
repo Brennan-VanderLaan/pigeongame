@@ -2,3 +2,6 @@ module(
     name = "pigeon-game",
     version = "0.0.0"
 )
+
+
+bazel_dep(name = "rules_go", version = "0.57.0")
