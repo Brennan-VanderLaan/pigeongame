@@ -4,6 +4,25 @@
 
 set -euo pipefail
 
+
+# Show usage information
+show_usage() {
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help              Show this help message"
+    echo "  -q, --quiet             Suppress informational output"
+    echo "  -v, --versions          Show version information for available tools"
+    echo "  --add-canary TOOLNAME   Create a new canary check for the specified tool"
+    echo ""
+    echo "This script checks for required dependencies and provides installation guidance."
+    echo "Dependencies are automatically discovered from tools/canaries/ directory."
+    echo ""
+    echo "Exit codes:"
+    echo "  0 - All dependencies satisfied (or canary successfully created)"
+    echo "  1 - One or more dependencies missing (or error creating canary)"
+}
+
 # Color codes for output (with fallback for systems that don't support them)
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
     RED=$(tput setaf 1)
@@ -234,24 +253,6 @@ create_canary_check() {
     echo "3. The canary will be automatically discovered on next run"
     
     return 0
-}
-
-# Show usage information
-show_usage() {
-    echo "Usage: $0 [options]"
-    echo ""
-    echo "Options:"
-    echo "  -h, --help              Show this help message"
-    echo "  -q, --quiet             Suppress informational output"
-    echo "  -v, --versions          Show version information for available tools"
-    echo "  --add-canary TOOLNAME   Create a new canary check for the specified tool"
-    echo ""
-    echo "This script checks for required dependencies and provides installation guidance."
-    echo "Dependencies are automatically discovered from tools/canaries/ directory."
-    echo ""
-    echo "Exit codes:"
-    echo "  0 - All dependencies satisfied (or canary successfully created)"
-    echo "  1 - One or more dependencies missing (or error creating canary)"
 }
 
 # Parse command line arguments
