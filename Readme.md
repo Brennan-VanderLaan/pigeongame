@@ -46,5 +46,7 @@ It still won't be safe.
 
 If you have ideas for security, I'm all ears. I'm pretty sure with the premise of how I want to technically implement this idea - which yields having bare-metal cluster access via a game - is a recipe for getting root'd if you open this up to the internet with naive end-users copying and pasting w/e into a teminal until it 'works'
 
+There's an aggressive amount of generated code, bad ideas, half-baked solutions, and general shenanigans in this repo. Tread lightly.
+
 If you take anything out of this repo, if you run any scripts, if you attach something like cursor or claude, you do so at your own risk. It's all MIT - do what you want with it - just don't point at me when you have a bad time. You did this <3
 ***
