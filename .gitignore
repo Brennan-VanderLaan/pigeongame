@@ -16,3 +16,5 @@
 /.clwb/
 
 .claude/
+
+user.bazelrc
