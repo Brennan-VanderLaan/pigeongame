@@ -1,0 +1,89 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+
+go_library(
+    name = "cni_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/pigeongame/cni",
+    visibility = ["//visibility:private"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
+    deps = [
+        "@com_github_containernetworking_cni//pkg/skel",
+        "@com_github_containernetworking_cni//pkg/types",
+        "@com_github_containernetworking_cni//pkg/types/100",
+        "@com_github_containernetworking_cni//pkg/version",
+        "@com_github_vishvananda_netlink//:netlink",
+        "@com_github_vishvananda_netns//:netns",
+    ],
+)
+
+go_binary(
+    name = "pigeon-cni",
+    embed = [":cni_lib"],
+    visibility = ["//visibility:public"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
+)
+
+oci_image(
+    name = "pigeon-cni-image",
+    base = "@alpine_linux_amd64",
+    entrypoint = ["/bin/sh", "-c", "/install.sh"],
+    tars = [":pigeon-cni-layer"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
+)
+
+genrule(
+    name = "pigeon-cni-layer",
+    srcs = [
+        ":pigeon-cni",
+        "install_cni.sh",
+    ],
+    outs = ["pigeon-cni-layer.tar"],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
+    cmd = """
+        mkdir -p layer/
+        cp $(location :pigeon-cni) layer/pigeon-cni
+        cp $(location install_cni.sh) layer/install.sh
+        chmod +x layer/pigeon-cni layer/install.sh
+        tar -cf $@ -C layer .
+    """,
+)
+
+# Windows-specific dummy target that provides helpful message
+genrule(
+    name = "pigeon-cni-image-windows-notice",
+    outs = ["windows-notice.txt"],
+    cmd = """
+echo "CNI image cannot be built on Windows." > $@
+echo "The pigeon-cni binary requires Linux-specific networking libraries." >> $@
+echo "" >> $@
+echo "To build the CNI image, please use:" >> $@
+echo "  - WSL2 (Windows Subsystem for Linux)" >> $@
+echo "  - A Linux development environment" >> $@
+echo "  - Docker with Linux containers" >> $@
+echo "" >> $@
+echo "Example WSL2 build command:" >> $@
+echo "  bazel build //k8s/cni:pigeon-cni-image" >> $@
+    """,
+    target_compatible_with = [
+        "@platforms//os:windows",
+    ],
+)
+
+# Alias that provides the appropriate target based on platform
+alias(
+    name = "pigeon-cni-build",
+    actual = select({
+        "@platforms//os:linux": ":pigeon-cni-image",
+        "@platforms//os:windows": ":pigeon-cni-image-windows-notice",
+        "//conditions:default": ":pigeon-cni-image-windows-notice",
+    }),
+)

@@ -1,0 +1,4 @@
+load("@gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix github.com/pigeongame
+gazelle(name = "gazelle")

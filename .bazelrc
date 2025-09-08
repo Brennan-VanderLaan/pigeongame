@@ -1,0 +1,5 @@
+# Windows-specific configuration to avoid path issues
+startup --output_user_root=C:/bazel-cache
+
+# Repository cache
+build --repository_cache=C:/bazel-repo-cache
