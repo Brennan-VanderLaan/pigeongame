@@ -84,6 +84,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	var address string
 	var mac net.HardwareAddr
+	var err error
 
 	if args.IfName == conf.GatewayInterface {
 		log.Println("We're the gateway")
@@ -197,8 +198,21 @@ func handleClient(args *skel.CmdArgs, conf *NetConf) (net.HardwareAddr, error) {
 }
 
 func configureInterfaceInNS(ns netns.NsHandle, linkName, address, finalName string) (net.HardwareAddr, error) {
+	// Get current namespace to restore later
+	origns, err := netns.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current netns: %v", err)
+	}
+	defer origns.Close()
+
+	// Switch to target namespace
+	if err := netns.Set(ns); err != nil {
+		return nil, fmt.Errorf("failed to set netns: %v", err)
+	}
+	defer netns.Set(origns) // Switch back when done
+
 	// Execute in the target namespace
-	err := netns.Do(ns, func(hostNS netns.NsHandle) error {
+	err = func() error {
 		// Get the link by its current name
 		link, err := netlink.LinkByName(linkName)
 		if err != nil {
@@ -236,7 +250,7 @@ func configureInterfaceInNS(ns netns.NsHandle, linkName, address, finalName stri
 		// Note: This is a simplified approach - in production you might want more sophisticated handling
 		
 		return nil
-	})
+	}()
 
 	if err != nil {
 		return nil, err
@@ -244,20 +258,40 @@ func configureInterfaceInNS(ns netns.NsHandle, linkName, address, finalName stri
 
 	// Get MAC address
 	var mac net.HardwareAddr
-	err = netns.Do(ns, func(hostNS netns.NsHandle) error {
+
+	// Switch to target namespace again to get MAC
+	if err := netns.Set(ns); err != nil {
+		return nil, fmt.Errorf("failed to set netns for MAC: %v", err)
+	}
+	defer netns.Set(origns) // Switch back when done
+
+	err = func() error {
 		link, err := netlink.LinkByName(finalName)
 		if err != nil {
 			return err
 		}
 		mac = link.Attrs().HardwareAddr
 		return nil
-	})
+	}()
 
 	return mac, err
 }
 
 func setupClientRouting(ns netns.NsHandle, linkName, gwAddress string) error {
-	return netns.Do(ns, func(hostNS netns.NsHandle) error {
+	// Get current namespace to restore later
+	origns, err := netns.Get()
+	if err != nil {
+		return fmt.Errorf("failed to get current netns: %v", err)
+	}
+	defer origns.Close()
+
+	// Switch to target namespace
+	if err := netns.Set(ns); err != nil {
+		return fmt.Errorf("failed to set netns: %v", err)
+	}
+	defer netns.Set(origns) // Switch back when done
+
+	return func() error {
 		link, err := netlink.LinkByName(linkName)
 		if err != nil {
 			return fmt.Errorf("failed to find link for routing: %v", err)
@@ -281,7 +315,7 @@ func setupClientRouting(ns netns.NsHandle, linkName, gwAddress string) error {
 		}
 
 		return nil
-	})
+	}()
 }
 
 func cmdDel(args *skel.CmdArgs) error {
