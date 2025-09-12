@@ -1,0 +1,46 @@
+version: v1alpha1 # Indicates the schema used to decode the contents.
+debug: false # Enable verbose logging to the console.
+persist: true # Indicates whether to pull the machine config upon every boot.
+# Provides machine specific configuration options.
+machine:
+  type: worker # Defines the role of the machine within the cluster.
+  kubelet:
+    nodeIP:
+      validSubnets:
+        - 10.12.0.0/24
+  # Provides machine specific network configuration options.
+  network:
+    # Configures KubeSpan feature.
+    kubespan:
+      enabled: false # Enable the KubeSpan feature.
+  nodeLabels:
+    ingress-ready: true
+  # Features describe individual Talos features that can be switched on or off.
+  features:
+    rbac: true # Enable role-based access control (RBAC).
+  sysctls:
+     net.ipv4.ip_forward: 1
+
+# Provides cluster specific configuration options.
+cluster:
+  network:
+    podSubnets:
+      - 10.244.0.0/16
+    # The service subnet CIDR.
+    serviceSubnets:
+      - 10.96.0.0/12
+  # Configures cluster member discovery.
+  discovery:
+    enabled: false # Enable the cluster membership discovery feature.
+    # Configure registries used for cluster member discovery.
+    registries:
+      # Kubernetes registry uses Kubernetes API server to discover cluster members and stores additional information
+      kubernetes:
+        disabled: false # Disable Kubernetes discovery registry.
+      # Service registry is using an external service to push and pull information about cluster members.
+      service:
+        endpoint: ''
+  apiServer:
+     # Extra certificate subject alternative names for the API server's certificate.
+     certSANs:
+         - 10.12.0.0/24

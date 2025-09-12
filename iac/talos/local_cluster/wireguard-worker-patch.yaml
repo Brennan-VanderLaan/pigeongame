@@ -1,0 +1,22 @@
+machine:
+  network:
+    interfaces:
+      - interface: eth0 # The interface name.
+        ignore: true
+      - interface: wg0 # The interface name.
+        # Assigns static IP addresses to the interface.
+        addresses:
+          - <WG-ADDR>
+        mtu: 1300 # The interface's MTU.
+        # Wireguard specific configuration.
+        routes:
+          - network: <WG-CIDR> # The route's network (destination).
+        wireguard:
+          privateKey: <WG-PRIVATE-KEY>
+          listenPort: 51111
+          peers:
+            - allowedIPs:
+                - <WG-CIDR>
+              endpoint: <WG-ENDPOINT>
+              persistentKeepaliveInterval: 10s
+              publicKey: <WG-PUBLIC-KEY>

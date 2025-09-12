@@ -18,3 +18,7 @@
 .claude/
 
 user.bazelrc
+
+# Keep it secret, keep it safe
+gen/*
+scripts/gen/*
