@@ -1,5 +1,6 @@
 
 import %workspace%/.bazelrc.d/main.rc
+import %workspace%/.bazelrc.d/performance.rc
 import %workspace%/.bazelrc.d/buildbuddy.rc
 
 try-import %workspace%/user.bazelrc

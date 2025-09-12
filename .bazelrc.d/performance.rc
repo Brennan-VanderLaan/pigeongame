@@ -1,0 +1,4 @@
+build --noslim_profile 
+build --experimental_profile_include_target_label
+build --experimental_profile_include_primary_output
+build --show_progress_rate_limit=60
