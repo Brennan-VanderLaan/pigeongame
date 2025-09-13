@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "pisp_perf_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/pigeongame/k8s/apps/pisp-perf",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "pisp-perf",
+    embed = [":pisp_perf_lib"],
+    visibility = ["//visibility:public"],
+)
+
+# Server mode (default)
+alias(
+    name = "server",
+    actual = ":pisp-perf",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "run",
+    actual = ":server",
+    visibility = ["//visibility:public"],
+)
+
+# Client mode 
+go_binary(
+    name = "client",
+    embed = [":pisp_perf_lib"],
+    args = ["-mode=client"],
+    visibility = ["//visibility:public"],
+)
