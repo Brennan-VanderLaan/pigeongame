@@ -7,9 +7,9 @@ PigeonGame uses Bazel as its primary build system with remote caching and execut
 ## Quick Start
 
 ### Prerequisites
-- Bazel 7.x (installed via Bazelisk recommended)
+- Bazel 8.3.1 (installed via Bazelisk recommended)
 - Go 1.21+ (for local development)
-- Docker (for container builds on Linux)
+- Docker (for container builds)
 
 ### Essential Commands
 ```bash
@@ -96,8 +96,7 @@ bazel build --platforms=@platforms//os:linux //k8s/cni:pigeon-cni
 3. Add convenience aliases for common operations: `run`, `build`, `test`
 4. Use `target_compatible_with` for platform restrictions
 
-### Dependency Management
-BUILD files are manually maintained. External Go dependencies are automatically resolved from `k8s/cni/go.mod` via the `go_deps` extension.
+
 
 ### Container Images
 All OCI images use Alpine Linux base and include:
