@@ -24,13 +24,20 @@ Figuring out how to make unity play nice with bazel. Because ~~I'm a massochist~
 
 ### Setup
 
-//TODO
-
-
+See [BUILD.md](BUILD.md) for complete build system documentation.
 
 ### Build instructions
 
-//TODO
+```bash
+# Build all targets
+bazel build //...
+
+# Run performance test
+bazel run //k8s/apps/pisp-perf:server
+bazel run //k8s/apps/pisp-perf:client
+```
+
+Full build documentation: [BUILD.md](BUILD.md)
 
 
 

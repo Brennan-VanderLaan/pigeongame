@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 
 go_library(
-    name = "cni_lib",
+    name = "pigeon-cni-lib",
     srcs = ["main.go"],
     importpath = "github.com/pigeongame/cni",
     visibility = ["//visibility:private"],
@@ -21,7 +21,7 @@ go_library(
 
 go_binary(
     name = "pigeon-cni",
-    embed = [":cni_lib"],
+    embed = [":pigeon-cni-lib"],
     visibility = ["//visibility:public"],
     target_compatible_with = [
         "@platforms//os:linux",
