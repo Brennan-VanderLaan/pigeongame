@@ -4,7 +4,7 @@ rm -r ./gen
 mkdir -p ./gen/pki
 
 WG_CIDR=10.12.0.0/24
-WG_LOCAL_ADDR=10.12.0.5/24
+WG_ADDR=10.12.0.5/24
 LOCAL_ADDR=10.12.0.2/32
 WG_ENDPOINT=192.168.10.13:51111
 # Initialize control plane and worker IP addresses

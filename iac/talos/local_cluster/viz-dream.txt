@@ -1,0 +1,50 @@
+Python fast-api rest server
+
+Description:
+A Mesh contains some number of nodes and hubs
+Pool of network clients (nodes)
+Some can be designated as hubs
+hubs can be linked together (like a graph)
+application state stored in local lightweight on-disk db
+
+data types
+Mesh:
+- id: uuid
+- name: string
+- nodes: list[Node]
+- hubs: list[Node]
+
+Node:
+- id: uuid
+- name: string
+- addrs: list[string]
+
+Hub:
+- id: uuid
+- name: string
+- spokes: list[Node]
+
+Endpoints
+mesh/<id>/node
+- POST -> add a node to the pool for a given mesh
+- DELETE -> remove a given node from the pool for a given mesh
+mesh/<id>/hub
+- POST -> set an existing node as a communication hub
+- GET -> get the list of existing hubs for a given mesh
+- DELETE -> remove the hub status from a node and break all links
+mesh/<id>/link_to_hub
+- POST -> conenct a node to a hub
+mesh/<id>/unlink_from_hub
+- POST -> disconenct a node from a hub
+etc...
+
+
+Order of operations:
+- Create viz structure including directories and initial python / html setups
+- flesh out fast api based server to include all methods
+- add in tests for the methods (unit tests, light-weight)
+- take another pass on methods to ensure tests pass
+- flesh out html example to work with application
+- python server is able to serve html application, unit tests are passing
+- create documentation annotations for rest endpoints to make fast-api auto doc nice
+

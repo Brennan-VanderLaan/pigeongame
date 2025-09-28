@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh Network Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            height: 60px;
+            resize: vertical;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        .mesh-list, .node-list, .hub-list {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .item {
+            background-color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .item h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        .item p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .flex {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        .flex > div {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mesh Network Visualizer</h1>
+
+        <!-- Mesh Management -->
+        <div class="section">
+            <h2>Mesh Management</h2>
+            <div class="flex">
+                <div class="form-group">
+                    <label for="meshName">Mesh Name:</label>
+                    <input type="text" id="meshName" placeholder="Enter mesh name">
+                </div>
+                <div>
+                    <button class="btn" onclick="createMesh()">Create Mesh</button>
+                    <button class="btn" onclick="loadMeshes()">Refresh List</button>
+                </div>
+            </div>
+
+            <div class="mesh-list" id="meshList">
+                <p>Click "Refresh List" to load meshes</p>
+            </div>
+        </div>
+
+        <!-- Node Management -->
+        <div class="section">
+            <h2>Node Management</h2>
+            <div class="form-group">
+                <label for="selectedMesh">Select Mesh:</label>
+                <select id="selectedMesh">
+                    <option value="">Select a mesh first</option>
+                </select>
+            </div>
+            <div class="flex">
+                <div class="form-group">
+                    <label for="nodeName">Node Name:</label>
+                    <input type="text" id="nodeName" placeholder="Enter node name">
+                </div>
+                <div class="form-group">
+                    <label for="nodeAddrs">Addresses (comma-separated):</label>
+                    <input type="text" id="nodeAddrs" placeholder="192.168.1.1,10.0.0.1">
+                </div>
+                <div>
+                    <button class="btn" onclick="addNode()">Add Node</button>
+                </div>
+            </div>
+
+            <div class="node-list" id="nodeList">
+                <p>Select a mesh to view nodes</p>
+            </div>
+        </div>
+
+        <!-- Hub Management -->
+        <div class="section">
+            <h2>Hub Management</h2>
+            <div class="flex">
+                <div class="form-group">
+                    <label for="hubNodeSelect">Select Node to Make Hub:</label>
+                    <select id="hubNodeSelect">
+                        <option value="">Select a node</option>
+                    </select>
+                </div>
+                <div>
+                    <button class="btn" onclick="createHub()">Create Hub</button>
+                    <button class="btn" onclick="loadHubs()">Refresh Hubs</button>
+                </div>
+            </div>
+
+            <div class="hub-list" id="hubList">
+                <p>Create hubs or refresh to view</p>
+            </div>
+        </div>
+
+        <!-- Link Management -->
+        <div class="section">
+            <h2>Link Management</h2>
+            <div class="flex">
+                <div class="form-group">
+                    <label for="linkNodeSelect">Select Node:</label>
+                    <select id="linkNodeSelect">
+                        <option value="">Select a node</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="linkHubSelect">Select Hub:</label>
+                    <select id="linkHubSelect">
+                        <option value="">Select a hub</option>
+                    </select>
+                </div>
+                <div>
+                    <button class="btn btn-success" onclick="linkToHub()">Link to Hub</button>
+                    <button class="btn btn-danger" onclick="unlinkFromHub()">Unlink from Hub</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentMeshId = null;
+        let meshes = [];
+        let nodes = [];
+        let hubs = [];
+
+        function showMessage(message, isError = false) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+            setTimeout(() => messagesDiv.innerHTML = '', 5000);
+        }
+
+        async function createMesh() {
+            const name = document.getElementById('meshName').value;
+            if (!name) {
+                showMessage('Please enter a mesh name', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name})
+                });
+
+                if (response.ok) {
+                    showMessage('Mesh created successfully');
+                    document.getElementById('meshName').value = '';
+                    loadMeshes();
+                } else {
+                    showMessage('Failed to create mesh', true);
+                }
+            } catch (error) {
+                showMessage('Error creating mesh: ' + error.message, true);
+            }
+        }
+
+        async function loadMeshes() {
+            try {
+                const response = await fetch(`${API_BASE}/mesh`);
+                if (response.ok) {
+                    meshes = await response.json();
+                    displayMeshes();
+                    updateMeshSelect();
+                } else {
+                    showMessage('Failed to load meshes', true);
+                }
+            } catch (error) {
+                showMessage('Error loading meshes: ' + error.message, true);
+            }
+        }
+
+        function displayMeshes() {
+            const meshListDiv = document.getElementById('meshList');
+            if (meshes.length === 0) {
+                meshListDiv.innerHTML = '<p>No meshes found</p>';
+                return;
+            }
+
+            meshListDiv.innerHTML = meshes.map(mesh => `
+                <div class="item">
+                    <h4>${mesh.name}</h4>
+                    <p>ID: ${mesh.id}</p>
+                    <p>Nodes: ${mesh.nodes.length}, Hubs: ${mesh.hubs.length}</p>
+                    <button class="btn" onclick="selectMesh('${mesh.id}')">Select</button>
+                    <button class="btn btn-danger" onclick="deleteMesh('${mesh.id}')">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function updateMeshSelect() {
+            const select = document.getElementById('selectedMesh');
+            select.innerHTML = '<option value="">Select a mesh</option>' +
+                meshes.map(mesh => `<option value="${mesh.id}">${mesh.name}</option>`).join('');
+        }
+
+        async function selectMesh(meshId) {
+            currentMeshId = meshId;
+            document.getElementById('selectedMesh').value = meshId;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${meshId}`);
+                if (response.ok) {
+                    const mesh = await response.json();
+                    nodes = mesh.nodes;
+                    hubs = mesh.hubs;
+                    displayNodes();
+                    displayHubs();
+                    updateNodeSelects();
+                    updateHubSelect();
+                    showMessage(`Selected mesh: ${mesh.name}`);
+                } else {
+                    showMessage('Failed to load mesh details', true);
+                }
+            } catch (error) {
+                showMessage('Error loading mesh: ' + error.message, true);
+            }
+        }
+
+        async function deleteMesh(meshId) {
+            if (!confirm('Are you sure you want to delete this mesh?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${meshId}`, {method: 'DELETE'});
+                if (response.ok) {
+                    showMessage('Mesh deleted successfully');
+                    loadMeshes();
+                    if (currentMeshId === meshId) {
+                        currentMeshId = null;
+                        nodes = [];
+                        hubs = [];
+                        displayNodes();
+                        displayHubs();
+                    }
+                } else {
+                    showMessage('Failed to delete mesh', true);
+                }
+            } catch (error) {
+                showMessage('Error deleting mesh: ' + error.message, true);
+            }
+        }
+
+        async function addNode() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const name = document.getElementById('nodeName').value;
+            const addrsStr = document.getElementById('nodeAddrs').value;
+
+            if (!name || !addrsStr) {
+                showMessage('Please enter node name and addresses', true);
+                return;
+            }
+
+            const addrs = addrsStr.split(',').map(addr => addr.trim());
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/node`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, addrs})
+                });
+
+                if (response.ok) {
+                    showMessage('Node added successfully');
+                    document.getElementById('nodeName').value = '';
+                    document.getElementById('nodeAddrs').value = '';
+                    selectMesh(currentMeshId); // Refresh
+                } else {
+                    showMessage('Failed to add node', true);
+                }
+            } catch (error) {
+                showMessage('Error adding node: ' + error.message, true);
+            }
+        }
+
+        function displayNodes() {
+            const nodeListDiv = document.getElementById('nodeList');
+            if (nodes.length === 0) {
+                nodeListDiv.innerHTML = '<p>No nodes found</p>';
+                return;
+            }
+
+            nodeListDiv.innerHTML = nodes.map(node => `
+                <div class="item">
+                    <h4>${node.name}</h4>
+                    <p>ID: ${node.id}</p>
+                    <p>Addresses: ${node.addrs.join(', ')}</p>
+                    <button class="btn btn-danger" onclick="deleteNode('${node.id}')">Delete Node</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteNode(nodeId) {
+            if (!currentMeshId) return;
+            if (!confirm('Are you sure you want to delete this node?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/node/${nodeId}`, {method: 'DELETE'});
+                if (response.ok) {
+                    showMessage('Node deleted successfully');
+                    selectMesh(currentMeshId); // Refresh
+                } else {
+                    showMessage('Failed to delete node', true);
+                }
+            } catch (error) {
+                showMessage('Error deleting node: ' + error.message, true);
+            }
+        }
+
+        function updateNodeSelects() {
+            const hubNodeSelect = document.getElementById('hubNodeSelect');
+            const linkNodeSelect = document.getElementById('linkNodeSelect');
+
+            const options = '<option value="">Select a node</option>' +
+                nodes.map(node => `<option value="${node.id}">${node.name}</option>`).join('');
+
+            hubNodeSelect.innerHTML = options;
+            linkNodeSelect.innerHTML = options;
+        }
+
+        async function createHub() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const nodeId = document.getElementById('hubNodeSelect').value;
+            if (!nodeId) {
+                showMessage('Please select a node to make a hub', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/hub`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({node_id: nodeId})
+                });
+
+                if (response.ok) {
+                    showMessage('Hub created successfully');
+                    document.getElementById('hubNodeSelect').value = '';
+                    selectMesh(currentMeshId); // Refresh
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to create hub: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error creating hub: ' + error.message, true);
+            }
+        }
+
+        async function loadHubs() {
+            if (!currentMeshId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/hub`);
+                if (response.ok) {
+                    hubs = await response.json();
+                    displayHubs();
+                    updateHubSelect();
+                } else {
+                    showMessage('Failed to load hubs', true);
+                }
+            } catch (error) {
+                showMessage('Error loading hubs: ' + error.message, true);
+            }
+        }
+
+        function displayHubs() {
+            const hubListDiv = document.getElementById('hubList');
+            if (hubs.length === 0) {
+                hubListDiv.innerHTML = '<p>No hubs found</p>';
+                return;
+            }
+
+            hubListDiv.innerHTML = hubs.map(hub => `
+                <div class="item">
+                    <h4>${hub.name} (Hub)</h4>
+                    <p>ID: ${hub.id}</p>
+                    <p>Node ID: ${hub.node_id}</p>
+                    <p>Connected Spokes: ${hub.spokes.length}</p>
+                    ${hub.spokes.length > 0 ? '<p>Spokes: ' + hub.spokes.map(spoke => spoke.name).join(', ') + '</p>' : ''}
+                    <button class="btn btn-danger" onclick="deleteHub('${hub.id}')">Delete Hub</button>
+                </div>
+            `).join('');
+        }
+
+        function updateHubSelect() {
+            const linkHubSelect = document.getElementById('linkHubSelect');
+            linkHubSelect.innerHTML = '<option value="">Select a hub</option>' +
+                hubs.map(hub => `<option value="${hub.id}">${hub.name}</option>`).join('');
+        }
+
+        async function deleteHub(hubId) {
+            if (!currentMeshId) return;
+            if (!confirm('Are you sure you want to delete this hub?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/hub/${hubId}`, {method: 'DELETE'});
+                if (response.ok) {
+                    showMessage('Hub deleted successfully');
+                    selectMesh(currentMeshId); // Refresh
+                } else {
+                    showMessage('Failed to delete hub', true);
+                }
+            } catch (error) {
+                showMessage('Error deleting hub: ' + error.message, true);
+            }
+        }
+
+        async function linkToHub() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const nodeId = document.getElementById('linkNodeSelect').value;
+            const hubId = document.getElementById('linkHubSelect').value;
+
+            if (!nodeId || !hubId) {
+                showMessage('Please select both a node and a hub', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/link_to_hub`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({node_id: nodeId, hub_id: hubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Node linked to hub successfully');
+                    selectMesh(currentMeshId); // Refresh
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to link: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error linking node: ' + error.message, true);
+            }
+        }
+
+        async function unlinkFromHub() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const nodeId = document.getElementById('linkNodeSelect').value;
+            const hubId = document.getElementById('linkHubSelect').value;
+
+            if (!nodeId || !hubId) {
+                showMessage('Please select both a node and a hub', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/unlink_from_hub`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({node_id: nodeId, hub_id: hubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Node unlinked from hub successfully');
+                    selectMesh(currentMeshId); // Refresh
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to unlink: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error unlinking node: ' + error.message, true);
+            }
+        }
+
+        // Auto-refresh mesh selection when dropdown changes
+        document.getElementById('selectedMesh').addEventListener('change', function() {
+            if (this.value) {
+                selectMesh(this.value);
+            }
+        });
+
+        // Load meshes on page load
+        loadMeshes();
+    </script>
+</body>
+</html>
