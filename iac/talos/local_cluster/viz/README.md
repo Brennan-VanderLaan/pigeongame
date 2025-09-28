@@ -102,5 +102,8 @@ viz/
 │   └── index.html
 └── tests/           # Unit tests
     ├── __init__.py
-    └── test_main.py
+    ├── test_base.py
+    ├── test_integration.py
+    ├── test_simple.py
+    └── test_unit.py
 ```

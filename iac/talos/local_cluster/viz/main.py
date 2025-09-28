@@ -24,8 +24,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files (commented out - no static directory exists)
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
@@ -41,13 +41,7 @@ async def create_mesh(
     mesh: MeshCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Create a new mesh network
-
-    - **name**: The name of the mesh network
-
-    Returns the created mesh with its UUID
-    """
+    """Create a new mesh network"""
     mesh_data = DatabaseHelper.create_mesh_data(mesh.name)
     db_mesh = MeshDB(**mesh_data)
     db.add(db_mesh)
@@ -57,11 +51,7 @@ async def create_mesh(
 
 @app.get("/mesh", response_model=List[MeshResponse])
 async def list_meshes(db: AsyncSession = Depends(get_db)):
-    """
-    List all mesh networks
-
-    Returns a list of all mesh networks with their nodes and hubs
-    """
+    """List all mesh networks with their nodes and hubs"""
     result = await db.execute(
         select(MeshDB).options(
             selectinload(MeshDB.nodes),
@@ -100,13 +90,7 @@ async def list_meshes(db: AsyncSession = Depends(get_db)):
 
 @app.get("/mesh/{mesh_id}", response_model=MeshResponse)
 async def get_mesh(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
-    """
-    Get a specific mesh network by ID
-
-    - **mesh_id**: UUID of the mesh to retrieve
-
-    Returns the mesh with all its nodes and hubs
-    """
+    """Get a specific mesh network by ID"""
     conditions = QueryHelper.mesh_by_id(mesh_id)
     result = await db.execute(
         select(MeshDB).where(*conditions).options(
@@ -148,13 +132,7 @@ async def delete_mesh(
     mesh_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Delete a mesh network
-
-    - **mesh_id**: UUID of the mesh to delete
-
-    This will also delete all associated nodes and hubs
-    """
+    """Delete a mesh network and all associated nodes and hubs"""
     conditions = QueryHelper.mesh_by_id(mesh_id)
     result = await db.execute(select(MeshDB).where(*conditions))
     mesh = result.scalar_one_or_none()
@@ -172,15 +150,7 @@ async def add_node_to_mesh(
     node: NodeCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Add a node to the pool for a given mesh
-
-    - **mesh_id**: UUID of the mesh to add the node to
-    - **name**: Name of the node
-    - **addrs**: List of network addresses for the node
-
-    Returns the created node with its UUID
-    """
+    """Add a node to the mesh"""
     # Check if mesh exists
     conditions = QueryHelper.mesh_by_id(mesh_id)
     result = await db.execute(select(MeshDB).where(*conditions))
@@ -211,14 +181,7 @@ async def remove_node_from_mesh(
     node_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Remove a given node from the pool for a given mesh
-
-    - **mesh_id**: UUID of the mesh
-    - **node_id**: UUID of the node to remove
-
-    This will also remove the node from any hubs it's connected to
-    """
+    """Remove a node from the mesh"""
     conditions = QueryHelper.node_by_id_and_mesh(node_id, mesh_id)
     result = await db.execute(select(NodeDB).where(*conditions))
     node = result.scalar_one_or_none()
@@ -236,14 +199,7 @@ async def create_hub(
     hub: HubCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Set an existing node as a communication hub
-
-    - **mesh_id**: UUID of the mesh
-    - **node_id**: UUID of the existing node to make a hub
-
-    Returns the created hub with its UUID
-    """
+    """Create a hub from an existing node"""
     # Check if mesh exists
     mesh_conditions = QueryHelper.mesh_by_id(mesh_id)
     result = await db.execute(select(MeshDB).where(*mesh_conditions))
@@ -301,13 +257,7 @@ async def create_hub(
 
 @app.get("/mesh/{mesh_id}/hub", response_model=List[HubResponse])
 async def get_hubs(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
-    """
-    Get the list of existing hubs for a given mesh
-
-    - **mesh_id**: UUID of the mesh
-
-    Returns all hubs in the mesh with their connected spokes
-    """
+    """Get all hubs in the mesh with their connected spokes"""
     conditions = QueryHelper.hubs_by_mesh(mesh_id)
     result = await db.execute(
         select(HubDB).where(*conditions).options(
@@ -333,14 +283,7 @@ async def remove_hub(
     hub_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Remove the hub status from a node and break all links
-
-    - **mesh_id**: UUID of the mesh
-    - **hub_id**: UUID of the hub to remove
-
-    This will break all connections between the hub and its spokes
-    """
+    """Remove hub status and break all spoke connections"""
     conditions = QueryHelper.hub_by_id_and_mesh(hub_id, mesh_id)
     result = await db.execute(select(HubDB).where(*conditions))
     hub = result.scalar_one_or_none()
@@ -358,15 +301,7 @@ async def link_node_to_hub(
     link: LinkRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Connect a node to a hub
-
-    - **mesh_id**: UUID of the mesh
-    - **node_id**: UUID of the node to connect
-    - **hub_id**: UUID of the hub to connect to
-
-    Creates a spoke connection from the node to the hub
-    """
+    """Connect a node to a hub as a spoke"""
     # Check if hub exists in this mesh
     hub_conditions = QueryHelper.hub_by_id_and_mesh(link.hub_id, mesh_id)
     result = await db.execute(
@@ -402,15 +337,7 @@ async def unlink_node_from_hub(
     link: LinkRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Disconnect a node from a hub
-
-    - **mesh_id**: UUID of the mesh
-    - **node_id**: UUID of the node to disconnect
-    - **hub_id**: UUID of the hub to disconnect from
-
-    Removes the spoke connection between the node and hub
-    """
+    """Disconnect a node from a hub"""
     # Check if hub exists in this mesh
     hub_conditions = QueryHelper.hub_by_id_and_mesh(link.hub_id, mesh_id)
     result = await db.execute(
