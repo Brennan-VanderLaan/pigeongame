@@ -44,11 +44,12 @@ class DatabaseHelper:
     """Helper class for database operations with proper UUID handling"""
 
     @staticmethod
-    def create_node_data(name: str, addrs_json: str, mesh_id: Union[str, UUID]) -> dict:
+    def create_node_data(name: str, addrs_json: str, mesh_id: Union[str, UUID], data_json: str = '{}') -> dict:
         """Create properly formatted data for NodeDB creation"""
         return {
             "name": name,
             "addrs": addrs_json,
+            "data": data_json,
             "mesh_id": to_uuid_str(mesh_id)
         }
 
@@ -108,3 +109,10 @@ class QueryHelper:
         """Create query condition for all hubs in mesh"""
         from models import HubDB
         return (HubDB.mesh_id == to_uuid_str(mesh_id),)
+
+    @staticmethod
+    def get_all_connected_hubs(hub_db_obj):
+        """Get all hubs connected to this hub (both directions)"""
+        # For now, just return the direct connections since we handle bidirectionality
+        # by adding connections in both directions in the API
+        return list(hub_db_obj.connected_hubs)

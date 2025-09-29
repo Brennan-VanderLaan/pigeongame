@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mesh Network Visualizer</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -115,13 +116,79 @@
         .flex > div {
             flex: 1;
         }
+        #networkGraph {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .graph-container {
+            margin-bottom: 20px;
+        }
+        .hub-connections {
+            background-color: #e8f4fd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        .hub-connections h5 {
+            margin: 0 0 10px 0;
+            color: #0066cc;
+        }
+        .connection-item {
+            background-color: white;
+            padding: 5px 10px;
+            margin: 2px 0;
+            border-radius: 3px;
+            border-left: 3px solid #0066cc;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #e9ecef;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            border-bottom: none;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            border: 1px solid #ddd;
+            border-radius: 0 4px 4px 4px;
+            padding: 20px;
+            background-color: white;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Mesh Network Visualizer</h1>
 
-        <!-- Mesh Management -->
+        <!-- Graph Visualization -->
+        <div class="section graph-container">
+            <h2>Network Topology Graph</h2>
+            <div id="networkGraph"></div>
+            <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                <strong>Legend:</strong>
+                🔵 Nodes | 🟠 Hubs | ➡️ Hub-to-Hub Connections | ➡️ Node-to-Hub Links
+            </p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab active" onclick="switchTab('management')">Management</div>
+            <div class="tab" onclick="switchTab('topology')">Hub Topology</div>
+        </div>
+
+        <div id="managementTab" class="tab-content">
+            <!-- Mesh Management -->
         <div class="section">
             <h2>Mesh Management</h2>
             <div class="flex">
@@ -213,6 +280,41 @@
         </div>
 
         <div id="messages"></div>
+        </div>
+
+        <!-- Hub Topology Tab -->
+        <div id="topologyTab" class="tab-content" style="display: none;">
+            <!-- Hub Connection Management -->
+            <div class="section">
+                <h2>Hub-to-Hub Connections</h2>
+                <div class="flex">
+                    <div class="form-group">
+                        <label for="sourceHubSelect">Source Hub:</label>
+                        <select id="sourceHubSelect">
+                            <option value="">Select source hub</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="targetHubSelect">Target Hub:</label>
+                        <select id="targetHubSelect">
+                            <option value="">Select target hub</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-success" onclick="connectHubs()">Connect Hubs</button>
+                        <button class="btn btn-danger" onclick="disconnectHubs()">Disconnect Hubs</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hub Topology Display -->
+            <div class="section">
+                <h2>Hub Network Topology</h2>
+                <div id="hubTopologyList">
+                    <p>Select a mesh to view hub connections</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -359,7 +461,7 @@
                 const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/node`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name, addrs})
+                    body: JSON.stringify({name, addrs, data: {}})
                 });
 
                 if (response.ok) {
@@ -483,6 +585,10 @@
                     <p>Node ID: ${hub.node_id}</p>
                     <p>Connected Spokes: ${hub.spokes.length}</p>
                     ${hub.spokes.length > 0 ? '<p>Spokes: ' + hub.spokes.map(spoke => spoke.name).join(', ') + '</p>' : ''}
+                    ${hub.connected_hubs && hub.connected_hubs.length > 0 ?
+                        '<div class="hub-connections"><h5>Connected Hubs:</h5>' +
+                        hub.connected_hubs.map(connectedHub => `<div class="connection-item">${connectedHub.name}</div>`).join('') +
+                        '</div>' : ''}
                     <button class="btn btn-danger" onclick="deleteHub('${hub.id}')">Delete Hub</button>
                 </div>
             `).join('');
@@ -490,8 +596,15 @@
 
         function updateHubSelect() {
             const linkHubSelect = document.getElementById('linkHubSelect');
-            linkHubSelect.innerHTML = '<option value="">Select a hub</option>' +
+            const sourceHubSelect = document.getElementById('sourceHubSelect');
+            const targetHubSelect = document.getElementById('targetHubSelect');
+
+            const options = '<option value="">Select a hub</option>' +
                 hubs.map(hub => `<option value="${hub.id}">${hub.name}</option>`).join('');
+
+            linkHubSelect.innerHTML = options;
+            if (sourceHubSelect) sourceHubSelect.innerHTML = options;
+            if (targetHubSelect) targetHubSelect.innerHTML = options;
         }
 
         async function deleteHub(hubId) {
@@ -576,6 +689,238 @@
                 showMessage('Error unlinking node: ' + error.message, true);
             }
         }
+
+        // Hub-to-Hub Connection Functions
+        async function connectHubs() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const sourceHubId = document.getElementById('sourceHubSelect').value;
+            const targetHubId = document.getElementById('targetHubSelect').value;
+
+            if (!sourceHubId || !targetHubId) {
+                showMessage('Please select both source and target hubs', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/connect_hubs`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({source_hub_id: sourceHubId, target_hub_id: targetHubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Hubs connected successfully');
+                    document.getElementById('sourceHubSelect').value = '';
+                    document.getElementById('targetHubSelect').value = '';
+                    selectMesh(currentMeshId); // Refresh
+                    updateTopologyDisplay();
+                    updateNetworkGraph();
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to connect hubs: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error connecting hubs: ' + error.message, true);
+            }
+        }
+
+        async function disconnectHubs() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const sourceHubId = document.getElementById('sourceHubSelect').value;
+            const targetHubId = document.getElementById('targetHubSelect').value;
+
+            if (!sourceHubId || !targetHubId) {
+                showMessage('Please select both source and target hubs', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/disconnect_hubs`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({source_hub_id: sourceHubId, target_hub_id: targetHubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Hubs disconnected successfully');
+                    document.getElementById('sourceHubSelect').value = '';
+                    document.getElementById('targetHubSelect').value = '';
+                    selectMesh(currentMeshId); // Refresh
+                    updateTopologyDisplay();
+                    updateNetworkGraph();
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to disconnect hubs: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error disconnecting hubs: ' + error.message, true);
+            }
+        }
+
+        // Graph Visualization Functions
+        let network = null;
+
+        function updateNetworkGraph() {
+            if (!currentMeshId || !nodes || !hubs) return;
+
+            const graphNodes = [];
+            const graphEdges = [];
+
+            // Add regular nodes
+            nodes.forEach(node => {
+                // Check if this node is also a hub
+                const isHub = hubs.some(hub => hub.node_id === node.id);
+                graphNodes.push({
+                    id: node.id,
+                    label: node.name,
+                    color: isHub ? '#ff9500' : '#4285f4', // Orange for hubs, blue for nodes
+                    shape: isHub ? 'hexagon' : 'dot',
+                    size: isHub ? 25 : 15,
+                    font: { color: 'black', size: 12 }
+                });
+            });
+
+            // Add hub-to-hub connections
+            hubs.forEach(hub => {
+                if (hub.connected_hubs && hub.connected_hubs.length > 0) {
+                    hub.connected_hubs.forEach(connectedHub => {
+                        // Only add edge once (avoid duplicates)
+                        if (hub.id < connectedHub.id) {
+                            graphEdges.push({
+                                from: hub.node_id,
+                                to: connectedHub.node_id,
+                                color: { color: '#ff6b6b', highlight: '#ff0000' },
+                                width: 3,
+                                arrows: { to: { enabled: false } },
+                                dashes: false,
+                                label: 'Hub Connection'
+                            });
+                        }
+                    });
+                }
+
+                // Add node-to-hub connections (spokes)
+                if (hub.spokes && hub.spokes.length > 0) {
+                    hub.spokes.forEach(spoke => {
+                        graphEdges.push({
+                            from: spoke.id,
+                            to: hub.node_id,
+                            color: { color: '#4caf50', highlight: '#2e7d32' },
+                            width: 2,
+                            arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                            dashes: true,
+                            label: 'Spoke Connection'
+                        });
+                    });
+                }
+            });
+
+            // Create network
+            const container = document.getElementById('networkGraph');
+            const data = { nodes: new vis.DataSet(graphNodes), edges: new vis.DataSet(graphEdges) };
+            const options = {
+                physics: {
+                    enabled: true,
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -26,
+                        centralGravity: 0.005,
+                        springLength: 230,
+                        springConstant: 0.18
+                    },
+                    stabilization: { iterations: 150 }
+                },
+                interaction: { dragNodes: true, dragView: true, zoomView: true },
+                nodes: {
+                    borderWidth: 2,
+                    shadow: true,
+                    font: { size: 12, face: 'arial' }
+                },
+                edges: {
+                    shadow: true,
+                    smooth: { type: 'continuous' }
+                }
+            };
+
+            if (network) {
+                network.destroy();
+            }
+            network = new vis.Network(container, data, options);
+
+            // Add click event for nodes
+            network.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const node = nodes.find(n => n.id === nodeId);
+                    const hub = hubs.find(h => h.node_id === nodeId);
+
+                    let info = `Node: ${node?.name || 'Unknown'}`;
+                    if (hub) {
+                        info += ` (Hub with ${hub.spokes.length} spokes`;
+                        if (hub.connected_hubs && hub.connected_hubs.length > 0) {
+                            info += `, connected to ${hub.connected_hubs.length} other hubs`;
+                        }
+                        info += ')';
+                    }
+                    showMessage(info);
+                }
+            });
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => tab.classList.remove('active'));
+            tabContents.forEach(content => content.style.display = 'none');
+
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').style.display = 'block';
+
+            if (tabName === 'topology') {
+                updateTopologyDisplay();
+            }
+        }
+
+        // Update topology display
+        function updateTopologyDisplay() {
+            const topologyDiv = document.getElementById('hubTopologyList');
+            if (!currentMeshId || hubs.length === 0) {
+                topologyDiv.innerHTML = '<p>No hubs found or no mesh selected</p>';
+                return;
+            }
+
+            let html = '';
+            hubs.forEach(hub => {
+                html += `
+                    <div class="item">
+                        <h4>${hub.name} (Hub)</h4>
+                        <p><strong>Spokes:</strong> ${hub.spokes.length > 0 ? hub.spokes.map(s => s.name).join(', ') : 'None'}</p>
+                        <p><strong>Connected Hubs:</strong> ${hub.connected_hubs && hub.connected_hubs.length > 0 ?
+                            hub.connected_hubs.map(h => h.name).join(', ') : 'None'}</p>
+                    </div>
+                `;
+            });
+
+            topologyDiv.innerHTML = html;
+        }
+
+        // Enhanced selectMesh function to update graph
+        const originalSelectMesh = selectMesh;
+        selectMesh = async function(meshId) {
+            await originalSelectMesh(meshId);
+            updateNetworkGraph();
+            updateTopologyDisplay();
+        };
 
         // Auto-refresh mesh selection when dropdown changes
         document.getElementById('selectedMesh').addEventListener('change', function() {

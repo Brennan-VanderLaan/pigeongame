@@ -16,12 +16,21 @@ hub_node_association = Table(
     Column('node_id', String(36), ForeignKey('nodes.id'))
 )
 
+# Association table for many-to-many relationship between hubs (hub-to-hub connections)
+hub_hub_association = Table(
+    'hub_connections',
+    Base.metadata,
+    Column('source_hub_id', String(36), ForeignKey('hubs.id')),
+    Column('target_hub_id', String(36), ForeignKey('hubs.id'))
+)
+
 class NodeDB(Base):
     __tablename__ = 'nodes'
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
     addrs = Column(String, nullable=False)  # JSON string of addresses
+    data = Column(String, nullable=True, default='{}')  # JSON string for arbitrary data
     mesh_id = Column(String(36), ForeignKey('meshes.id'))
 
     mesh = relationship("MeshDB", back_populates="nodes")
@@ -39,6 +48,14 @@ class HubDB(Base):
     mesh = relationship("MeshDB", back_populates="hubs")
     spokes = relationship("NodeDB", secondary=hub_node_association, back_populates="connected_hubs")
 
+    # Hub-to-hub connections (bidirectional many-to-many)
+    connected_hubs = relationship(
+        "HubDB",
+        secondary=hub_hub_association,
+        primaryjoin=id == hub_hub_association.c.source_hub_id,
+        secondaryjoin=id == hub_hub_association.c.target_hub_id
+    )
+
 class MeshDB(Base):
     __tablename__ = 'meshes'
 
@@ -52,11 +69,13 @@ class MeshDB(Base):
 class NodeCreate(BaseModel):
     name: str
     addrs: List[str]
+    data: Optional[dict] = {}
 
 class NodeResponse(BaseModel):
     id: UUID
     name: str
     addrs: List[str]
+    data: dict = {}
 
     class Config:
         from_attributes = True
@@ -69,9 +88,22 @@ class HubResponse(BaseModel):
     name: str
     node_id: UUID
     spokes: List[NodeResponse] = []
+    connected_hubs: List['HubBasicInfo'] = []
 
     class Config:
         from_attributes = True
+
+class HubBasicInfo(BaseModel):
+    """Basic hub info to avoid circular references in hub connections"""
+    id: UUID
+    name: str
+    node_id: UUID
+
+    class Config:
+        from_attributes = True
+
+# Update HubResponse to use the forward reference
+HubResponse.model_rebuild()
 
 class MeshCreate(BaseModel):
     name: str
@@ -88,6 +120,10 @@ class MeshResponse(BaseModel):
 class LinkRequest(BaseModel):
     node_id: UUID
     hub_id: UUID
+
+class HubLinkRequest(BaseModel):
+    source_hub_id: UUID
+    target_hub_id: UUID
 
 # Database setup
 DATABASE_URL = "sqlite+aiosqlite:///./mesh.db"

@@ -25,21 +25,21 @@ class TestUserWorkflows:
                 # 2. User adds several nodes to represent different locations
                 datacenter = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "datacenter-primary", "addrs": ["10.1.0.1", "192.168.100.1"]}
+                    json={"name": "datacenter-primary", "addrs": ["10.1.0.1", "192.168.100.1"], "data": {}}
                 )
                 assert datacenter.status_code == 201
                 dc_node = datacenter.json()
 
                 branch_office = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "branch-office-nyc", "addrs": ["172.16.1.1"]}
+                    json={"name": "branch-office-nyc", "addrs": ["172.16.1.1"], "data": {}}
                 )
                 assert branch_office.status_code == 201
                 branch_node = branch_office.json()
 
                 remote_worker = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "remote-worker-laptop", "addrs": ["192.168.1.100"]}
+                    json={"name": "remote-worker-laptop", "addrs": ["192.168.1.100"], "data": {}}
                 )
                 assert remote_worker.status_code == 201
                 remote_node = remote_worker.json()
@@ -98,19 +98,19 @@ class TestUserWorkflows:
                 # Create nodes for different datacenters
                 dc_east = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "datacenter-east", "addrs": ["10.1.0.1"]}
+                    json={"name": "datacenter-east", "addrs": ["10.1.0.1"], "data": {}}
                 )
                 dc_east_node = dc_east.json()
 
                 dc_west = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "datacenter-west", "addrs": ["10.2.0.1"]}
+                    json={"name": "datacenter-west", "addrs": ["10.2.0.1"], "data": {}}
                 )
                 dc_west_node = dc_west.json()
 
                 edge_device = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "edge-device", "addrs": ["172.16.1.1"]}
+                    json={"name": "edge-device", "addrs": ["172.16.1.1"], "data": {}}
                 )
                 edge_node = edge_device.json()
 
@@ -195,13 +195,13 @@ class TestUserWorkflows:
                 # Setup production environment (hub-spoke)
                 prod_hub_node = await client.post(
                     f"/mesh/{prod_mesh['id']}/node",
-                    json={"name": "prod-datacenter", "addrs": ["10.0.1.1"]}
+                    json={"name": "prod-datacenter", "addrs": ["10.0.1.1"], "data": {}}
                 )
                 prod_hub_node = prod_hub_node.json()
 
                 prod_worker1 = await client.post(
                     f"/mesh/{prod_mesh['id']}/node",
-                    json={"name": "prod-worker-1", "addrs": ["10.0.1.10"]}
+                    json={"name": "prod-worker-1", "addrs": ["10.0.1.10"], "data": {}}
                 )
                 prod_worker1 = prod_worker1.json()
 
@@ -219,20 +219,20 @@ class TestUserWorkflows:
                 # Setup staging environment (different topology)
                 stage_node1 = await client.post(
                     f"/mesh/{stage_mesh['id']}/node",
-                    json={"name": "stage-server-1", "addrs": ["10.0.2.1"]}
+                    json={"name": "stage-server-1", "addrs": ["10.0.2.1"], "data": {}}
                 )
                 stage_node1 = stage_node1.json()
 
                 stage_node2 = await client.post(
                     f"/mesh/{stage_mesh['id']}/node",
-                    json={"name": "stage-server-2", "addrs": ["10.0.2.2"]}
+                    json={"name": "stage-server-2", "addrs": ["10.0.2.2"], "data": {}}
                 )
                 stage_node2 = stage_node2.json()
 
                 # Setup development environment (minimal)
                 dev_node = await client.post(
                     f"/mesh/{dev_mesh['id']}/node",
-                    json={"name": "dev-laptop", "addrs": ["192.168.1.100"]}
+                    json={"name": "dev-laptop", "addrs": ["192.168.1.100"], "data": {}}
                 )
                 dev_node = dev_node.json()
 
@@ -309,7 +309,7 @@ class TestUserWorkflows:
                 # User creates a node and tries to make duplicate hubs
                 node_response = await client.post(
                     f"/mesh/{mesh['id']}/node",
-                    json={"name": "test-node", "addrs": ["192.168.1.1"]}
+                    json={"name": "test-node", "addrs": ["192.168.1.1"], "data": {}}
                 )
                 node = node_response.json()
 
@@ -370,7 +370,7 @@ class TestUserWorkflows:
                     # Create datacenter node
                     dc_response = await client.post(
                         f"/mesh/{mesh['id']}/node",
-                        json={"name": f"datacenter-{region}", "addrs": [f"10.{len(hubs)+1}.0.1"]}
+                        json={"name": f"datacenter-{region}", "addrs": [f"10.{len(hubs)+1}.0.1"], "data": {}}
                     )
                     dc_node = dc_response.json()
 
@@ -390,7 +390,8 @@ class TestUserWorkflows:
                             f"/mesh/{mesh['id']}/node",
                             json={
                                 "name": f"edge-{region}-{j+1}",
-                                "addrs": [f"172.{i+1}.{j+1}.1"]
+                                "addrs": [f"172.{i+1}.{j+1}.1"],
+                                "data": {}
                             }
                         )
                         edge_node = edge_response.json()

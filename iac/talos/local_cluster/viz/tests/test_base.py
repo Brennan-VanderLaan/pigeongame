@@ -87,14 +87,16 @@ async def create_test_mesh(client: AsyncClient, name: str = "test-mesh") -> dict
 
 
 async def create_test_node(client: AsyncClient, mesh_id: str, name: str = "test-node",
-                          addrs: list = None) -> dict:
+                          addrs: list = None, data: dict = None) -> dict:
     """Helper to create a test node"""
     if addrs is None:
         addrs = ["192.168.1.1"]
+    if data is None:
+        data = {}
 
     response = await client.post(
         f"/mesh/{mesh_id}/node",
-        json={"name": name, "addrs": addrs}
+        json={"name": name, "addrs": addrs, "data": data}
     )
     assert response.status_code == 201
     return response.json()

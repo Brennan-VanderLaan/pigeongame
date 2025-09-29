@@ -18,6 +18,7 @@ Node:
 - id: uuid
 - name: string
 - addrs: list[string]
+- data: string (json object)
 
 Hub:
 - id: uuid
@@ -48,4 +49,13 @@ Order of operations:
 - python server is able to serve html application, unit tests are passing [done]
 - create documentation annotations for rest endpoints to make fast-api auto doc nice [done]
 - update documentation / polish pass [done]
-
+- add additional data layer to node models for future use (data: string (json object)) [done]
+- add ability to connect hubs to each other to allow for more complex deployments [done]
+    - Nodes connect to hubs like spokes [done]
+    - Hubs can connect to other hubs to allow for more complex graphs [done]
+    - all connections represent unicast udp connections for a wireguard mesh network [done]
+    - update the web ui layer to include the new hub connection logic [done]
+    - update the web ui layer to use a visual graph (like a directed graph) to represent the current selected mesh topology [done]
+- take a pass on tests [done]
+- add ability to load in json objects to nodes via ui
+    - this includes making sure tests exist for setting arbitrary payloads of varying sizes

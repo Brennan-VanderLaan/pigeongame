@@ -125,13 +125,14 @@ class TestNodeEndpoints:
                 mesh = await create_test_mesh(client)
 
                 # Add node
-                node_data = {"name": "unit-test-node", "addrs": ["10.0.0.1", "192.168.1.1"]}
+                node_data = {"name": "unit-test-node", "addrs": ["10.0.0.1", "192.168.1.1"], "data": {}}
                 response = await client.post(f"/mesh/{mesh['id']}/node", json=node_data)
                 assert response.status_code == 201
 
                 node = response.json()
                 assert node["name"] == "unit-test-node"
                 assert node["addrs"] == ["10.0.0.1", "192.168.1.1"]
+                assert node["data"] == {}
                 assert "id" in node
         finally:
             await db_manager.teardown()
@@ -145,7 +146,7 @@ class TestNodeEndpoints:
         try:
             async with TestClient() as client:
                 fake_uuid = "12345678-1234-5678-1234-567812345678"
-                node_data = {"name": "orphan-node", "addrs": ["192.168.1.1"]}
+                node_data = {"name": "orphan-node", "addrs": ["192.168.1.1"], "data": {}}
 
                 response = await client.post(f"/mesh/{fake_uuid}/node", json=node_data)
                 assert response.status_code == 404

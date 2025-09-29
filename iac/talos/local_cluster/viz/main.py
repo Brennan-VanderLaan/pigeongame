@@ -12,8 +12,8 @@ from models import (
     MeshDB, NodeDB, HubDB,
     MeshCreate, MeshResponse,
     NodeCreate, NodeResponse,
-    HubCreate, HubResponse,
-    LinkRequest
+    HubCreate, HubResponse, HubBasicInfo,
+    LinkRequest, HubLinkRequest
 )
 from database import get_db, init_db
 from utils import DatabaseHelper, QueryHelper
@@ -55,7 +55,8 @@ async def list_meshes(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(MeshDB).options(
             selectinload(MeshDB.nodes),
-            selectinload(MeshDB.hubs).selectinload(HubDB.spokes)
+            selectinload(MeshDB.hubs).selectinload(HubDB.spokes),
+            selectinload(MeshDB.hubs).selectinload(HubDB.connected_hubs)
         )
     )
     meshes = result.scalars().all()
@@ -65,7 +66,8 @@ async def list_meshes(db: AsyncSession = Depends(get_db)):
         nodes = [NodeResponse(
             id=node.id,
             name=node.name,
-            addrs=json.loads(node.addrs)
+            addrs=json.loads(node.addrs),
+            data=json.loads(node.data) if node.data else {}
         ) for node in mesh.nodes]
 
         hubs = [HubResponse(
@@ -75,8 +77,14 @@ async def list_meshes(db: AsyncSession = Depends(get_db)):
             spokes=[NodeResponse(
                 id=spoke.id,
                 name=spoke.name,
-                addrs=json.loads(spoke.addrs)
-            ) for spoke in hub.spokes]
+                addrs=json.loads(spoke.addrs),
+                data=json.loads(spoke.data) if spoke.data else {}
+            ) for spoke in hub.spokes],
+            connected_hubs=[HubBasicInfo(
+                id=connected_hub.id,
+                name=connected_hub.name,
+                node_id=connected_hub.node_id
+            ) for connected_hub in QueryHelper.get_all_connected_hubs(hub)]
         ) for hub in mesh.hubs]
 
         response.append(MeshResponse(
@@ -95,7 +103,8 @@ async def get_mesh(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(MeshDB).where(*conditions).options(
             selectinload(MeshDB.nodes),
-            selectinload(MeshDB.hubs).selectinload(HubDB.spokes)
+            selectinload(MeshDB.hubs).selectinload(HubDB.spokes),
+            selectinload(MeshDB.hubs).selectinload(HubDB.connected_hubs)
         )
     )
     mesh = result.scalar_one_or_none()
@@ -106,7 +115,8 @@ async def get_mesh(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
     nodes = [NodeResponse(
         id=node.id,
         name=node.name,
-        addrs=json.loads(node.addrs)
+        addrs=json.loads(node.addrs),
+        data=json.loads(node.data) if node.data else {}
     ) for node in mesh.nodes]
 
     hubs = [HubResponse(
@@ -116,8 +126,14 @@ async def get_mesh(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
         spokes=[NodeResponse(
             id=spoke.id,
             name=spoke.name,
-            addrs=json.loads(spoke.addrs)
-        ) for spoke in hub.spokes]
+            addrs=json.loads(spoke.addrs),
+            data=json.loads(spoke.data) if spoke.data else {}
+        ) for spoke in hub.spokes],
+        connected_hubs=[HubBasicInfo(
+            id=connected_hub.id,
+            name=connected_hub.name,
+            node_id=connected_hub.node_id
+        ) for connected_hub in QueryHelper.get_all_connected_hubs(hub)]
     ) for hub in mesh.hubs]
 
     return MeshResponse(
@@ -162,6 +178,7 @@ async def add_node_to_mesh(
     node_data = DatabaseHelper.create_node_data(
         name=node.name,
         addrs_json=json.dumps(node.addrs),
+        data_json=json.dumps(node.data),
         mesh_id=mesh_id
     )
     db_node = NodeDB(**node_data)
@@ -172,7 +189,8 @@ async def add_node_to_mesh(
     return NodeResponse(
         id=db_node.id,
         name=db_node.name,
-        addrs=json.loads(db_node.addrs)
+        addrs=json.loads(db_node.addrs),
+        data=json.loads(db_node.data) if db_node.data else {}
     )
 
 @app.delete("/mesh/{mesh_id}/node/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -252,7 +270,8 @@ async def create_hub(
         id=db_hub.id,
         name=db_hub.name,
         node_id=db_hub.node_id,
-        spokes=[]
+        spokes=[],
+        connected_hubs=[]
     )
 
 @app.get("/mesh/{mesh_id}/hub", response_model=List[HubResponse])
@@ -261,7 +280,8 @@ async def get_hubs(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
     conditions = QueryHelper.hubs_by_mesh(mesh_id)
     result = await db.execute(
         select(HubDB).where(*conditions).options(
-            selectinload(HubDB.spokes)
+            selectinload(HubDB.spokes),
+            selectinload(HubDB.connected_hubs)
         )
     )
     hubs = result.scalars().all()
@@ -273,8 +293,14 @@ async def get_hubs(mesh_id: UUID, db: AsyncSession = Depends(get_db)):
         spokes=[NodeResponse(
             id=spoke.id,
             name=spoke.name,
-            addrs=json.loads(spoke.addrs)
-        ) for spoke in hub.spokes]
+            addrs=json.loads(spoke.addrs),
+            data=json.loads(spoke.data) if spoke.data else {}
+        ) for spoke in hub.spokes],
+        connected_hubs=[HubBasicInfo(
+            id=connected_hub.id,
+            name=connected_hub.name,
+            node_id=connected_hub.node_id
+        ) for connected_hub in QueryHelper.get_all_connected_hubs(hub)]
     ) for hub in hubs]
 
 @app.delete("/mesh/{mesh_id}/hub/{hub_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -322,6 +348,10 @@ async def link_node_to_hub(
     if not node:
         raise HTTPException(status_code=404, detail="Node not found in this mesh")
 
+    # Check if node is trying to link to itself as a hub
+    if str(hub.node_id) == str(link.node_id):
+        raise HTTPException(status_code=400, detail="A node cannot be linked to itself as a hub")
+
     # Check if already linked
     if node in hub.spokes:
         raise HTTPException(status_code=400, detail="Node is already linked to this hub")
@@ -366,6 +396,97 @@ async def unlink_node_from_hub(
     await db.commit()
 
     return {"message": "Node unlinked from hub successfully"}
+
+# Hub-to-hub connection endpoints
+@app.post("/mesh/{mesh_id}/connect_hubs", status_code=status.HTTP_200_OK)
+async def connect_hubs(
+    mesh_id: UUID,
+    hub_link: HubLinkRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Connect two hubs together to form complex network topology"""
+    # Validate that both hubs exist in the mesh
+    source_hub_conditions = QueryHelper.hub_by_id_and_mesh(hub_link.source_hub_id, mesh_id)
+    result = await db.execute(
+        select(HubDB).where(*source_hub_conditions).options(
+            selectinload(HubDB.connected_hubs)
+        )
+    )
+    source_hub = result.scalar_one_or_none()
+
+    if not source_hub:
+        raise HTTPException(status_code=404, detail="Source hub not found in this mesh")
+
+    target_hub_conditions = QueryHelper.hub_by_id_and_mesh(hub_link.target_hub_id, mesh_id)
+    result = await db.execute(
+        select(HubDB).where(*target_hub_conditions).options(
+            selectinload(HubDB.connected_hubs)
+        )
+    )
+    target_hub = result.scalar_one_or_none()
+
+    if not target_hub:
+        raise HTTPException(status_code=404, detail="Target hub not found in this mesh")
+
+    # Prevent self-connection
+    if source_hub.id == target_hub.id:
+        raise HTTPException(status_code=400, detail="A hub cannot connect to itself")
+
+    # Check if connection already exists (either direction)
+    if target_hub in source_hub.connected_hubs or source_hub in target_hub.connected_hubs:
+        raise HTTPException(status_code=400, detail="Hubs are already connected")
+
+    # Create bidirectional connection (hubs connect to each other)
+    source_hub.connected_hubs.append(target_hub)
+    target_hub.connected_hubs.append(source_hub)
+
+    await db.commit()
+
+    return {"message": "Hubs connected successfully"}
+
+@app.post("/mesh/{mesh_id}/disconnect_hubs", status_code=status.HTTP_200_OK)
+async def disconnect_hubs(
+    mesh_id: UUID,
+    hub_link: HubLinkRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Disconnect two hubs from each other"""
+    # Validate that both hubs exist in the mesh
+    source_hub_conditions = QueryHelper.hub_by_id_and_mesh(hub_link.source_hub_id, mesh_id)
+    result = await db.execute(
+        select(HubDB).where(*source_hub_conditions).options(
+            selectinload(HubDB.connected_hubs)
+        )
+    )
+    source_hub = result.scalar_one_or_none()
+
+    if not source_hub:
+        raise HTTPException(status_code=404, detail="Source hub not found in this mesh")
+
+    target_hub_conditions = QueryHelper.hub_by_id_and_mesh(hub_link.target_hub_id, mesh_id)
+    result = await db.execute(
+        select(HubDB).where(*target_hub_conditions).options(
+            selectinload(HubDB.connected_hubs)
+        )
+    )
+    target_hub = result.scalar_one_or_none()
+
+    if not target_hub:
+        raise HTTPException(status_code=404, detail="Target hub not found in this mesh")
+
+    # Check if connection exists (either direction)
+    if target_hub not in source_hub.connected_hubs and source_hub not in target_hub.connected_hubs:
+        raise HTTPException(status_code=400, detail="Hubs are not connected")
+
+    # Remove bidirectional connection
+    if target_hub in source_hub.connected_hubs:
+        source_hub.connected_hubs.remove(target_hub)
+    if source_hub in target_hub.connected_hubs:
+        target_hub.connected_hubs.remove(source_hub)
+
+    await db.commit()
+
+    return {"message": "Hubs disconnected successfully"}
 
 if __name__ == "__main__":
     import uvicorn
