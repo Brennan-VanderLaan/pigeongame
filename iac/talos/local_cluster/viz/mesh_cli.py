@@ -22,25 +22,55 @@ from typing import Dict, Any, Optional, List
 from uuid import UUID
 # import uvloop  # Optional performance improvement
 
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 from database import AsyncSessionLocal, init_db
 from mesh_manager import MeshNetworkManager
-from models import MeshCreate, NodeCreate, HubCreate, LinkRequest, HubLinkRequest
+from models import MeshCreate, NodeCreate, HubCreate, LinkRequest, HubLinkRequest, Base
 from logging_config import setup_cli_logging, get_component_logger
 
 
 class MeshCLI:
     """Main CLI class for mesh network operations"""
 
-    def __init__(self):
+    def __init__(self, database_url: Optional[str] = None):
         self.manager: Optional[MeshNetworkManager] = None
         self.logger = get_component_logger("cli")
+        self.database_url = database_url
+        self.custom_engine = None
+        self.custom_session_local = None
 
     async def setup(self):
         """Initialize database connection"""
         self.logger.debug("Initializing database connection")
-        await init_db()
+
+        if self.database_url:
+            # Use custom database URL
+            self.logger.debug(f"Using custom database: {self.database_url}")
+            self.custom_engine = create_async_engine(self.database_url, echo=False)
+            self.custom_session_local = sessionmaker(
+                self.custom_engine, class_=AsyncSession, expire_on_commit=False
+            )
+            # Create tables for custom database
+            async with self.custom_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        else:
+            # Use default database
+            await init_db()
+
         self.logger.debug("Database initialization complete")
         # We'll create the manager per command to ensure proper session handling
+
+    def get_session_local(self):
+        """Get the appropriate session local based on configuration"""
+        if self.custom_session_local:
+            return self.custom_session_local
+        return AsyncSessionLocal
+
+    async def cleanup(self):
+        """Clean up resources"""
+        if self.custom_engine:
+            await self.custom_engine.dispose()
 
     def print_table(self, data: List[Dict[str, Any]], headers: List[str]):
         """Print data in table format"""
@@ -79,7 +109,7 @@ class MeshCLI:
     async def find_mesh_by_name(self, name: str) -> Optional[UUID]:
         """Find mesh ID by name"""
         self.logger.debug(f"Looking up mesh by name: {name}")
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             meshes = await manager.meshes.list_meshes()
             for mesh in meshes:
@@ -91,7 +121,7 @@ class MeshCLI:
 
     async def find_node_by_name(self, mesh_id: UUID, name: str) -> Optional[UUID]:
         """Find node ID by name within a mesh"""
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             mesh = await manager.meshes.get_mesh(mesh_id)
             if mesh:
@@ -102,7 +132,7 @@ class MeshCLI:
 
     async def find_hub_by_name(self, mesh_id: UUID, name: str) -> Optional[UUID]:
         """Find hub ID by name within a mesh"""
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             hubs = await manager.hubs.get_hubs(mesh_id)
             for hub in hubs:
@@ -117,7 +147,7 @@ class MeshCLI:
         if not mesh_id:
             self.error_exit(f"Mesh '{args.mesh}' not found", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             mesh = await manager.meshes.get_mesh(mesh_id)
 
@@ -147,7 +177,7 @@ class MeshCLI:
         if not node_id:
             self.error_exit(f"Node '{args.name}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             mesh = await manager.meshes.get_mesh(mesh_id)
             node = next((n for n in mesh.nodes if n.id == node_id), None)
@@ -188,7 +218,7 @@ class MeshCLI:
             except json.JSONDecodeError as e:
                 self.error_exit(f"Invalid JSON in --data: {e}", 400)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             node_create = NodeCreate(name=args.name, addrs=addrs, data=data)
             node = await manager.nodes.add_node_to_mesh(mesh_id, node_create)
@@ -213,7 +243,7 @@ class MeshCLI:
         if not node_id:
             self.error_exit(f"Node '{args.name}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             success = await manager.nodes.remove_node_from_mesh(mesh_id, node_id)
 
@@ -234,7 +264,7 @@ class MeshCLI:
         if not mesh_id:
             self.error_exit(f"Mesh '{args.mesh}' not found", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             hubs = await manager.hubs.get_hubs(mesh_id)
 
@@ -266,7 +296,7 @@ class MeshCLI:
         if not hub_id:
             self.error_exit(f"Hub '{args.name}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             hubs = await manager.hubs.get_hubs(mesh_id)
             hub = next((h for h in hubs if h.id == hub_id), None)
@@ -300,7 +330,7 @@ class MeshCLI:
         if not node_id:
             self.error_exit(f"Node '{args.name}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             hub_create = HubCreate(node_id=node_id)
             result = await manager.hubs.create_hub(mesh_id, hub_create)
@@ -328,7 +358,7 @@ class MeshCLI:
         if not hub_id:
             self.error_exit(f"Hub '{args.name}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             success = await manager.hubs.remove_hub(mesh_id, hub_id)
 
@@ -353,7 +383,7 @@ class MeshCLI:
         if not hub_id:
             self.error_exit(f"Hub '{args.hub}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             link_request = LinkRequest(node_id=node_id, hub_id=hub_id)
             result = await manager.links.link_node_to_hub(mesh_id, link_request)
@@ -380,7 +410,7 @@ class MeshCLI:
         if not hub_id:
             self.error_exit(f"Hub '{args.hub}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             link_request = LinkRequest(node_id=node_id, hub_id=hub_id)
             result = await manager.links.unlink_node_from_hub(mesh_id, link_request)
@@ -407,7 +437,7 @@ class MeshCLI:
         if not target_hub_id:
             self.error_exit(f"Target hub '{args.target_hub}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             hub_link_request = HubLinkRequest(source_hub_id=source_hub_id, target_hub_id=target_hub_id)
             result = await manager.links.connect_hubs(mesh_id, hub_link_request)
@@ -434,7 +464,7 @@ class MeshCLI:
         if not target_hub_id:
             self.error_exit(f"Target hub '{args.target_hub}' not found in mesh '{args.mesh}'", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             hub_link_request = HubLinkRequest(source_hub_id=source_hub_id, target_hub_id=target_hub_id)
             result = await manager.links.disconnect_hubs(mesh_id, hub_link_request)
@@ -450,7 +480,7 @@ class MeshCLI:
     # Mesh commands
     async def get_meshes(self, args):
         """List all meshes"""
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             meshes = await manager.meshes.list_meshes()
 
@@ -476,7 +506,7 @@ class MeshCLI:
         if not mesh_id:
             self.error_exit(f"Mesh '{args.name}' not found", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             mesh = await manager.meshes.get_mesh(mesh_id)
 
@@ -495,7 +525,7 @@ class MeshCLI:
 
     async def create_mesh(self, args):
         """Create a new mesh"""
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
 
             # Check if mesh already exists
@@ -517,7 +547,7 @@ class MeshCLI:
         if not mesh_id:
             self.error_exit(f"Mesh '{args.name}' not found", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             success = await manager.meshes.delete_mesh(mesh_id)
 
@@ -533,7 +563,7 @@ class MeshCLI:
         if not mesh_id:
             self.error_exit(f"Mesh '{args.name}' not found", 404)
 
-        async with AsyncSessionLocal() as db:
+        async with self.get_session_local()() as db:
             manager = MeshNetworkManager(db)
             mesh = await manager.meshes.get_mesh(mesh_id)
 
@@ -602,6 +632,12 @@ Examples:
         '--quiet', '-q',
         action='store_true',
         help='Suppress all logs except errors'
+    )
+
+    parser.add_argument(
+        '--database', '--db',
+        type=str,
+        help='Database URL (default: sqlite+aiosqlite:///./mesh.db)'
     )
 
     subparsers = parser.add_subparsers(dest='verb', help='Available verbs')
@@ -737,7 +773,7 @@ async def main():
         parser.print_help()
         sys.exit(1)
 
-    cli = MeshCLI()
+    cli = MeshCLI(database_url=args.database)
     await cli.setup()
 
     try:
@@ -807,6 +843,8 @@ async def main():
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+    finally:
+        await cli.cleanup()
 
 if __name__ == '__main__':
     asyncio.run(main())
