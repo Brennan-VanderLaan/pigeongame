@@ -229,6 +229,11 @@
                     <button class="btn" onclick="addNode()">Add Node</button>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="nodeData">Node Data (JSON):</label>
+                <textarea id="nodeData" placeholder='{"role": "web-server", "environment": "production", "cpu_cores": 4}' style="height: 80px; font-family: monospace;"></textarea>
+                <small style="color: #666; font-size: 12px;">Optional: Add JSON metadata for this node (e.g., server config, deployment info, tags)</small>
+            </div>
 
             <div class="node-list" id="nodeList">
                 <p>Select a mesh to view nodes</p>
@@ -449,6 +454,7 @@
 
             const name = document.getElementById('nodeName').value;
             const addrsStr = document.getElementById('nodeAddrs').value;
+            const dataStr = document.getElementById('nodeData').value;
 
             if (!name || !addrsStr) {
                 showMessage('Please enter node name and addresses', true);
@@ -457,17 +463,29 @@
 
             const addrs = addrsStr.split(',').map(addr => addr.trim());
 
+            // Parse JSON data if provided
+            let data = {};
+            if (dataStr.trim()) {
+                try {
+                    data = JSON.parse(dataStr);
+                } catch (e) {
+                    showMessage('Invalid JSON in node data field: ' + e.message, true);
+                    return;
+                }
+            }
+
             try {
                 const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/node`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name, addrs, data: {}})
+                    body: JSON.stringify({name, addrs, data})
                 });
 
                 if (response.ok) {
                     showMessage('Node added successfully');
                     document.getElementById('nodeName').value = '';
                     document.getElementById('nodeAddrs').value = '';
+                    document.getElementById('nodeData').value = '';
                     selectMesh(currentMeshId); // Refresh
                 } else {
                     showMessage('Failed to add node', true);
@@ -489,6 +507,10 @@
                     <h4>${node.name}</h4>
                     <p>ID: ${node.id}</p>
                     <p>Addresses: ${node.addrs.join(', ')}</p>
+                    ${Object.keys(node.data || {}).length > 0 ?
+                        `<p><strong>Data:</strong> <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 11px;">${JSON.stringify(node.data)}</code></p>` :
+                        '<p><em>No additional data</em></p>'
+                    }
                     <button class="btn btn-danger" onclick="deleteNode('${node.id}')">Delete Node</button>
                 </div>
             `).join('');

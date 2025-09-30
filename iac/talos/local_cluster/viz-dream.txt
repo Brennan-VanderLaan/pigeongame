@@ -57,5 +57,17 @@ Order of operations:
     - update the web ui layer to include the new hub connection logic [done]
     - update the web ui layer to use a visual graph (like a directed graph) to represent the current selected mesh topology [done]
 - take a pass on tests [done]
-- add ability to load in json objects to nodes via ui
+- add ability to load in json objects to nodes via ui [done but need verification]
     - this includes making sure tests exist for setting arbitrary payloads of varying sizes
+- refactor ui logic into common library, posturing to add a cli layer that users or applications can interact with directly if they have access to the db files [done]
+- add cli layer [done]
+    - user can manage meshes [done]
+    - user can add and remove nodes from a mesh [done]
+    - user can link nodes [done]
+    - user can create hubs and link them [done]
+    - interactions are transactional, as in the process executes and then dies giving the shell back to the user [done]
+    - should have useful error codes for failures [done]
+- add common logging layer [done]
+    - timestamps and where we are, posture for elk stack later on [done]
+    - update CLI to use common logging [done]
+    - update main web application to use common logging [done]

@@ -1,10 +1,12 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+import logging
 from models import Base
 
 DATABASE_URL = "sqlite+aiosqlite:///./mesh.db"
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+# Create engine without echo - we'll control SQL logging through our logging system
+engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
