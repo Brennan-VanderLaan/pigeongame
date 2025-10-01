@@ -496,6 +496,11 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                     meshes = await response.json();
                     displayMeshes();
                     updateMeshSelect();
+
+                    // Auto-select if there's exactly one mesh
+                    if (meshes.length === 1 && !currentMeshId) {
+                        selectMesh(meshes[0].id);
+                    }
                 } else {
                     showMessage('Failed to load meshes', true);
                 }
@@ -1063,6 +1068,9 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                     hub.connected_hubs.forEach(connectedHub => {
                         // Only add edge once (avoid duplicates)
                         if (hub.id < connectedHub.id) {
+                            const hubNode = nodes.find(n => n.id === hub.node_id);
+                            const connectedHubNode = nodes.find(n => n.id === connectedHub.node_id);
+
                             graphEdges.push({
                                 from: hub.node_id,
                                 to: connectedHub.node_id,
@@ -1070,7 +1078,9 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                                 width: 3,
                                 arrows: { to: { enabled: false } },
                                 dashes: false,
-                                label: 'Hub Connection'
+                                length: 500,  // Longer for hub-to-hub
+                                label: `${hubNode?.addrs[0] || hubNode?.name || ''} <----> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
+                                font: { size: 10, color: '#666', align: 'middle' }
                             });
                         }
                     });
@@ -1079,6 +1089,9 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                 // Add node-to-hub connections (spokes)
                 if (hub.spokes && hub.spokes.length > 0) {
                     hub.spokes.forEach(spoke => {
+                        const spokeNode = nodes.find(n => n.id === spoke.id);
+                        const hubNode = nodes.find(n => n.id === hub.node_id);
+
                         graphEdges.push({
                             from: spoke.id,
                             to: hub.node_id,
@@ -1086,7 +1099,9 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                             width: 2,
                             arrows: { to: { enabled: true, scaleFactor: 0.5 } },
                             dashes: true,
-                            label: 'Spoke Connection'
+                            length: 250,  // Longer for spokes to show labels
+                            label: `${spokeNode?.addrs[0] || spokeNode?.name || ''} → ${hubNode?.addrs[0] || hubNode?.name || ''}`,
+                            font: { size: 10, color: '#666', align: 'middle' }
                         });
                     });
                 }
@@ -1438,10 +1453,6 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                     <div class="context-menu-item" onclick="viewNodeDetails('${node.id}')">
                         ℹ️ View Details
                     </div>
-                    <div class="context-menu-item" onclick="showConnectHubSubmenu('${hub.id}', '${hub.name}')">
-                        🔗 Connect to Hub...
-                    </div>
-                    <div class="context-menu-divider"></div>
                     <div class="context-menu-item" onclick="removeHubFromMenu('${hub.id}')">
                         🔽 Demote to Node
                     </div>
@@ -1455,10 +1466,6 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                     <div class="context-menu-item" onclick="viewNodeDetails('${node.id}')">
                         ℹ️ View Details
                     </div>
-                    <div class="context-menu-item" onclick="showLinkToHubSubmenu('${node.id}', '${node.name}')">
-                        🔗 Link to Hub...
-                    </div>
-                    <div class="context-menu-divider"></div>
                     <div class="context-menu-item" onclick="quickMakeHub('${node.id}')">
                         ⬆️ Promote to Hub
                     </div>
@@ -1617,7 +1624,8 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
 
                 if (response.ok) {
                     showMessage('Node linked to hub successfully');
-                    selectMesh(currentMeshId);
+                    // Just update the data without rebuilding the graph
+                    await updateMeshDataSilently();
                 } else {
                     const error = await response.json();
                     showMessage('Failed to link: ' + (error.detail || 'Unknown error'), true);
@@ -1642,7 +1650,8 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
 
                 if (response.ok) {
                     showMessage('Hubs connected successfully');
-                    selectMesh(currentMeshId);
+                    // Just update the data without rebuilding the graph
+                    await updateMeshDataSilently();
                 } else {
                     const error = await response.json();
                     showMessage('Failed to connect hubs: ' + (error.detail || 'Unknown error'), true);
@@ -1650,6 +1659,122 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
             } catch (error) {
                 showMessage('Error connecting hubs: ' + error.message, true);
             }
+        }
+
+        // Update mesh data without rebuilding the graph (preserves positions)
+        async function updateMeshDataSilently() {
+            if (!currentMeshId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}`);
+                if (response.ok) {
+                    const mesh = await response.json();
+                    nodes = mesh.nodes;
+                    hubs = mesh.hubs;
+
+                    // Update displays and graph incrementally
+                    displayNodes();
+                    displayHubs();
+                    updateNodeSelects();
+                    updateHubSelect();
+                    updateNetworkGraphIncremental();
+                    updateTopologyDisplay();
+                }
+            } catch (error) {
+                console.error('Error updating mesh data:', error);
+            }
+        }
+
+        // Incremental graph update that preserves node positions
+        function updateNetworkGraphIncremental() {
+            if (!currentMeshId || !nodes || !hubs || !network) return;
+
+            // Get current positions
+            const positions = network.getPositions();
+
+            const graphNodes = [];
+            const graphEdges = [];
+
+            // Add nodes with preserved positions
+            nodes.forEach(node => {
+                const isHub = hubs.some(hub => hub.node_id === node.id);
+                const nodeData = {
+                    id: node.id,
+                    label: node.name,
+                    color: isHub ? '#ff9500' : '#4285f4',
+                    shape: isHub ? 'hexagon' : 'dot',
+                    size: isHub ? 25 : 15,
+                    font: { color: 'black', size: 12 }
+                };
+
+                // Preserve position if it exists
+                if (positions[node.id]) {
+                    nodeData.x = positions[node.id].x;
+                    nodeData.y = positions[node.id].y;
+                    nodeData.physics = false; // Don't let physics move positioned nodes
+                }
+
+                graphNodes.push(nodeData);
+            });
+
+            // Add edges with hostname/address labels
+            hubs.forEach(hub => {
+                if (hub.connected_hubs && hub.connected_hubs.length > 0) {
+                    hub.connected_hubs.forEach(connectedHub => {
+                        if (hub.id < connectedHub.id) {
+                            const hubNode = nodes.find(n => n.id === hub.node_id);
+                            const connectedHubNode = nodes.find(n => n.id === connectedHub.node_id);
+
+                            graphEdges.push({
+                                from: hub.node_id,
+                                to: connectedHub.node_id,
+                                color: { color: '#ff6b6b', highlight: '#ff0000' },
+                                width: 3,
+                                arrows: { to: { enabled: false } },
+                                dashes: false,
+                                length: 500,  // Longer for hub-to-hub
+                                label: `${hubNode?.addrs[0] || hubNode?.name || ''} <-> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
+                                font: { size: 12, color: '#666', align: 'middle' }
+                            });
+                        }
+                    });
+                }
+
+                if (hub.spokes && hub.spokes.length > 0) {
+                    hub.spokes.forEach(spoke => {
+                        const spokeNode = nodes.find(n => n.id === spoke.id);
+                        const hubNode = nodes.find(n => n.id === hub.node_id);
+
+                        graphEdges.push({
+                            from: spoke.id,
+                            to: hub.node_id,
+                            color: { color: '#4caf50', highlight: '#2e7d32' },
+                            width: 2,
+                            arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                            dashes: true,
+                            length: 250,  // Longer for spokes to show labels
+                            label: `${spokeNode?.addrs[0] || spokeNode?.name || ''} → ${hubNode?.addrs[0] || hubNode?.name || ''}`,
+                            font: { size: 10, color: '#777', align: 'middle' }
+                        });
+                    });
+                }
+            });
+
+            // Update the network data without destroying it
+            const data = network.body.data;
+            data.nodes.clear();
+            data.nodes.add(graphNodes);
+            data.edges.clear();
+            data.edges.add(graphEdges);
+
+            // Re-enable physics after a short delay to let new edges settle
+            setTimeout(() => {
+                graphNodes.forEach(node => {
+                    if (positions[node.id]) {
+                        data.nodes.update({id: node.id, physics: true});
+                    }
+                });
+            }, 100);
         }
 
         // Hide context menu on canvas click
