@@ -4,7 +4,7 @@ Tests for node data field functionality
 
 import pytest
 import json
-from tests.test_base import TestDatabaseManager, TestClient, create_test_mesh
+from tests.test_base import DatabaseManager, ApiClient, create_test_mesh
 
 
 class TestNodeDataField:
@@ -13,11 +13,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_creation_with_simple_data(self):
         """Test creating a node with simple JSON data"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "data-test-mesh")
 
@@ -41,11 +41,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_creation_with_empty_data(self):
         """Test creating a node with empty data"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "empty-data-mesh")
 
@@ -67,11 +67,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_creation_without_data_field(self):
         """Test creating a node without specifying data field (should default to empty)"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "no-data-mesh")
 
@@ -92,11 +92,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_creation_with_complex_data(self):
         """Test creating a node with complex nested JSON data"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "complex-data-mesh")
 
@@ -144,11 +144,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_data_persistence(self):
         """Test that node data persists correctly when retrieving mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "persistence-test-mesh")
 
@@ -187,11 +187,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_large_data_payload(self):
         """Test creating a node with a large JSON payload"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "large-data-mesh")
 
@@ -244,11 +244,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_data_in_hub_operations(self):
         """Test that node data is preserved in hub operations"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-data-mesh")
 
@@ -320,11 +320,11 @@ class TestNodeDataField:
     @pytest.mark.asyncio
     async def test_node_data_edge_cases(self):
         """Test edge cases for node data field"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "edge-case-mesh")
 

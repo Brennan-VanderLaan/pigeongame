@@ -13,7 +13,7 @@ from models import Base
 from database import get_db
 
 
-class TestDatabaseManager:
+class DatabaseManager:
     """Manages test database lifecycle"""
 
     def __init__(self):
@@ -63,7 +63,7 @@ class TestDatabaseManager:
             os.unlink(self.temp_db_file)
 
 
-class TestClient:
+class ApiClient:
     """Manages test client lifecycle"""
 
     def __init__(self):

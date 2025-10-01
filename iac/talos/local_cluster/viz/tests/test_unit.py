@@ -3,7 +3,7 @@ Unit tests for individual API endpoints
 """
 
 import pytest
-from tests.test_base import TestDatabaseManager, TestClient, create_test_mesh, create_test_node, create_test_hub
+from tests.test_base import DatabaseManager, ApiClient, create_test_mesh, create_test_node, create_test_hub
 
 
 class TestMeshEndpoints:
@@ -12,11 +12,11 @@ class TestMeshEndpoints:
     @pytest.mark.asyncio
     async def test_create_mesh(self):
         """Test mesh creation"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 response = await client.post("/mesh", json={"name": "unit-test-mesh"})
                 assert response.status_code == 201
 
@@ -31,11 +31,11 @@ class TestMeshEndpoints:
     @pytest.mark.asyncio
     async def test_get_mesh_by_id(self):
         """Test retrieving mesh by ID"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "retrieval-test")
 
@@ -52,11 +52,11 @@ class TestMeshEndpoints:
     @pytest.mark.asyncio
     async def test_get_nonexistent_mesh(self):
         """Test error handling for non-existent mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 fake_uuid = "12345678-1234-5678-1234-567812345678"
                 response = await client.get(f"/mesh/{fake_uuid}")
                 assert response.status_code == 404
@@ -67,11 +67,11 @@ class TestMeshEndpoints:
     @pytest.mark.asyncio
     async def test_list_meshes(self):
         """Test listing all meshes"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create multiple meshes
                 mesh1 = await create_test_mesh(client, "mesh-1")
                 mesh2 = await create_test_mesh(client, "mesh-2")
@@ -91,11 +91,11 @@ class TestMeshEndpoints:
     @pytest.mark.asyncio
     async def test_delete_mesh(self):
         """Test mesh deletion"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "deletable-mesh")
 
@@ -116,11 +116,11 @@ class TestNodeEndpoints:
     @pytest.mark.asyncio
     async def test_add_node_to_mesh(self):
         """Test adding a node to a mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client)
 
@@ -140,11 +140,11 @@ class TestNodeEndpoints:
     @pytest.mark.asyncio
     async def test_add_node_to_nonexistent_mesh(self):
         """Test error when adding node to non-existent mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 fake_uuid = "12345678-1234-5678-1234-567812345678"
                 node_data = {"name": "orphan-node", "addrs": ["192.168.1.1"], "data": {}}
 
@@ -157,11 +157,11 @@ class TestNodeEndpoints:
     @pytest.mark.asyncio
     async def test_remove_node_from_mesh(self):
         """Test removing a node from a mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh and node
                 mesh = await create_test_mesh(client)
                 node = await create_test_node(client, mesh["id"], "removable-node")
@@ -180,11 +180,11 @@ class TestNodeEndpoints:
     @pytest.mark.asyncio
     async def test_remove_nonexistent_node(self):
         """Test error when removing non-existent node"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client)
 
@@ -201,11 +201,11 @@ class TestHubEndpoints:
     @pytest.mark.asyncio
     async def test_create_hub_from_node(self):
         """Test creating a hub from an existing node"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh and node
                 mesh = await create_test_mesh(client)
                 node = await create_test_node(client, mesh["id"], "hub-node")
@@ -223,11 +223,11 @@ class TestHubEndpoints:
     @pytest.mark.asyncio
     async def test_create_hub_from_nonexistent_node(self):
         """Test error when creating hub from non-existent node"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client)
 
@@ -243,11 +243,11 @@ class TestHubEndpoints:
     @pytest.mark.asyncio
     async def test_duplicate_hub_creation(self):
         """Test error when creating duplicate hub"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh and node
                 mesh = await create_test_mesh(client)
                 node = await create_test_node(client, mesh["id"], "unique-node")
@@ -268,11 +268,11 @@ class TestHubEndpoints:
     @pytest.mark.asyncio
     async def test_get_hubs_in_mesh(self):
         """Test retrieving all hubs in a mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh and nodes
                 mesh = await create_test_mesh(client)
                 node1 = await create_test_node(client, mesh["id"], "hub-1")
@@ -297,11 +297,11 @@ class TestHubEndpoints:
     @pytest.mark.asyncio
     async def test_remove_hub(self):
         """Test removing a hub"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh, node, and hub
                 mesh = await create_test_mesh(client)
                 node = await create_test_node(client, mesh["id"], "removable-hub")
@@ -325,11 +325,11 @@ class TestLinkEndpoints:
     @pytest.mark.asyncio
     async def test_link_node_to_hub(self):
         """Test linking a node to a hub"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh, nodes, and hub
                 mesh = await create_test_mesh(client)
                 hub_node = await create_test_node(client, mesh["id"], "hub-node")
@@ -355,11 +355,11 @@ class TestLinkEndpoints:
     @pytest.mark.asyncio
     async def test_unlink_node_from_hub(self):
         """Test unlinking a node from a hub"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh, nodes, hub, and link
                 mesh = await create_test_mesh(client)
                 hub_node = await create_test_node(client, mesh["id"], "hub-node")
@@ -390,11 +390,11 @@ class TestLinkEndpoints:
     @pytest.mark.asyncio
     async def test_link_to_nonexistent_hub(self):
         """Test error when linking to non-existent hub"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh and node
                 mesh = await create_test_mesh(client)
                 node = await create_test_node(client, mesh["id"], "orphan-node")
@@ -411,11 +411,11 @@ class TestLinkEndpoints:
     @pytest.mark.asyncio
     async def test_link_nonexistent_node(self):
         """Test error when linking non-existent node"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh, node, and hub
                 mesh = await create_test_mesh(client)
                 hub_node = await create_test_node(client, mesh["id"], "hub-node")
@@ -433,11 +433,11 @@ class TestLinkEndpoints:
     @pytest.mark.asyncio
     async def test_duplicate_link(self):
         """Test error when creating duplicate link"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh, nodes, hub, and link
                 mesh = await create_test_mesh(client)
                 hub_node = await create_test_node(client, mesh["id"], "hub-node")

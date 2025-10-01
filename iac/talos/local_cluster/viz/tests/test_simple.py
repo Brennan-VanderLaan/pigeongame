@@ -1,14 +1,14 @@
 import pytest
-from tests.test_base import TestDatabaseManager, TestClient
+from tests.test_base import DatabaseManager, ApiClient
 
 @pytest.mark.asyncio
 async def test_create_mesh():
     """Test creating a mesh"""
-    db_manager = TestDatabaseManager()
+    db_manager = DatabaseManager()
     await db_manager.setup()
 
     try:
-        async with TestClient() as client:
+        async with ApiClient() as client:
             response = await client.post("/mesh", json={"name": "test-mesh"})
             assert response.status_code == 201
             data = response.json()
@@ -22,11 +22,11 @@ async def test_create_mesh():
 @pytest.mark.asyncio
 async def test_full_workflow():
     """Test the complete workflow: create mesh, add node, create hub, link"""
-    db_manager = TestDatabaseManager()
+    db_manager = DatabaseManager()
     await db_manager.setup()
 
     try:
-        async with TestClient() as client:
+        async with ApiClient() as client:
             # Create mesh
             response = await client.post("/mesh", json={"name": "test-mesh"})
             assert response.status_code == 201

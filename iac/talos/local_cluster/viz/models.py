@@ -1,9 +1,8 @@
 from typing import List, Optional
 from uuid import UUID, uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import Column, String, ForeignKey, Table, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 import uuid
 
 Base = declarative_base()
@@ -72,35 +71,32 @@ class NodeCreate(BaseModel):
     data: Optional[dict] = {}
 
 class NodeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     addrs: List[str]
     data: dict = {}
 
-    class Config:
-        from_attributes = True
-
 class HubCreate(BaseModel):
     node_id: UUID
 
 class HubResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     node_id: UUID
     spokes: List[NodeResponse] = []
     connected_hubs: List['HubBasicInfo'] = []
 
-    class Config:
-        from_attributes = True
-
 class HubBasicInfo(BaseModel):
     """Basic hub info to avoid circular references in hub connections"""
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     node_id: UUID
-
-    class Config:
-        from_attributes = True
 
 # Update HubResponse to use the forward reference
 HubResponse.model_rebuild()
@@ -109,13 +105,12 @@ class MeshCreate(BaseModel):
     name: str
 
 class MeshResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     name: str
     nodes: List[NodeResponse] = []
     hubs: List[HubResponse] = []
-
-    class Config:
-        from_attributes = True
 
 class LinkRequest(BaseModel):
     node_id: UUID

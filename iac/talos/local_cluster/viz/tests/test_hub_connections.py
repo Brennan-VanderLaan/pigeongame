@@ -3,7 +3,7 @@ Tests for hub-to-hub connection functionality
 """
 
 import pytest
-from tests.test_base import TestDatabaseManager, TestClient, create_test_mesh, create_test_node, create_test_hub
+from tests.test_base import DatabaseManager, ApiClient, create_test_mesh, create_test_node, create_test_hub
 
 
 class TestHubConnections:
@@ -12,11 +12,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_connect_two_hubs(self):
         """Test basic hub-to-hub connection"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-connection-test")
 
@@ -49,11 +49,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_disconnect_hubs(self):
         """Test disconnecting hubs"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-disconnection-test")
 
@@ -90,11 +90,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_complex_hub_topology(self):
         """Test creating complex hub-to-hub topology"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "complex-topology-test")
 
@@ -148,11 +148,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_hub_with_spokes_and_connections(self):
         """Test hub that has both spoke nodes and hub connections"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-mixed-connections-test")
 
@@ -208,11 +208,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_error_cases(self):
         """Test error cases for hub connections"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-error-test")
 
@@ -281,11 +281,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_hub_deletion_breaks_connections(self):
         """Test that deleting a hub breaks all its connections"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-deletion-test")
 
@@ -331,11 +331,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_scale_hub_connections(self):
         """Test many hub connections (star topology)"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "hub-scale-test")
 
@@ -377,11 +377,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_mesh_response_includes_hub_connections(self):
         """Test that mesh responses include hub connection information"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "mesh-response-test")
 
@@ -421,11 +421,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_hub_cannot_connect_to_itself_comprehensive(self):
         """Test comprehensive scenarios where a hub cannot connect to itself"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "self-connection-prevention-test")
 
@@ -495,11 +495,11 @@ class TestHubConnections:
     @pytest.mark.asyncio
     async def test_node_cannot_link_to_itself_as_hub(self):
         """Test that a node cannot be linked to itself as a hub (spoke of its own hub)"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create mesh
                 mesh = await create_test_mesh(client, "node-self-link-prevention-test")
 

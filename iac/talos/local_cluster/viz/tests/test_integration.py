@@ -3,7 +3,7 @@ Integration tests for complete user workflows
 """
 
 import pytest
-from tests.test_base import TestDatabaseManager, TestClient
+from tests.test_base import DatabaseManager, ApiClient
 
 
 class TestUserWorkflows:
@@ -12,11 +12,11 @@ class TestUserWorkflows:
     @pytest.mark.asyncio
     async def test_basic_mesh_workflow(self):
         """Test: User creates mesh, adds nodes, creates hub, links nodes"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # 1. User creates a new mesh
                 mesh_response = await client.post("/mesh", json={"name": "company-network"})
                 assert mesh_response.status_code == 201
@@ -86,11 +86,11 @@ class TestUserWorkflows:
     @pytest.mark.asyncio
     async def test_network_reconfiguration_workflow(self):
         """Test: User reconfigures network topology over time"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Initial setup: Create mesh with multiple datacenters
                 mesh_response = await client.post("/mesh", json={"name": "multi-dc-network"})
                 mesh = mesh_response.json()
@@ -177,11 +177,11 @@ class TestUserWorkflows:
     @pytest.mark.asyncio
     async def test_multi_mesh_environment(self):
         """Test: User manages multiple independent mesh networks"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create multiple meshes for different purposes
                 production_mesh = await client.post("/mesh", json={"name": "production-network"})
                 prod_mesh = production_mesh.json()
@@ -279,11 +279,11 @@ class TestUserWorkflows:
     @pytest.mark.asyncio
     async def test_error_recovery_workflow(self):
         """Test: User handles various error conditions gracefully"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # User tries to work with non-existent mesh
                 fake_uuid = "12345678-1234-5678-1234-567812345678"
 
@@ -353,11 +353,11 @@ class TestUserWorkflows:
     @pytest.mark.asyncio
     async def test_scale_test_workflow(self):
         """Test: Create a larger mesh network to verify scalability"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with TestClient() as client:
+            async with ApiClient() as client:
                 # Create a mesh for a medium-sized organization
                 mesh_response = await client.post("/mesh", json={"name": "enterprise-mesh"})
                 mesh = mesh_response.json()

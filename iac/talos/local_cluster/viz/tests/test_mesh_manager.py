@@ -4,10 +4,9 @@ Tests for the mesh_manager common library
 
 import pytest
 import json
-from tests.test_base import TestDatabaseManager, TestClient
+from tests.test_base import DatabaseManager, ApiClient
 from mesh_manager import MeshNetworkManager
 from models import MeshCreate, NodeCreate, HubCreate, LinkRequest, HubLinkRequest
-from database import AsyncSessionLocal
 
 
 class TestMeshManagerLibrary:
@@ -16,11 +15,11 @@ class TestMeshManagerLibrary:
     @pytest.mark.asyncio
     async def test_mesh_manager_creates_mesh(self):
         """Test that the mesh manager can create a mesh"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with AsyncSessionLocal() as db:
+            async with db_manager.SessionLocal() as db:
                 manager = MeshNetworkManager(db)
 
                 mesh_create = MeshCreate(name="manager-test-mesh")
@@ -36,11 +35,11 @@ class TestMeshManagerLibrary:
     @pytest.mark.asyncio
     async def test_mesh_manager_creates_node_with_data(self):
         """Test that the mesh manager can create a node with JSON data"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with AsyncSessionLocal() as db:
+            async with db_manager.SessionLocal() as db:
                 manager = MeshNetworkManager(db)
 
                 # Create mesh first
@@ -80,11 +79,11 @@ class TestMeshManagerLibrary:
     @pytest.mark.asyncio
     async def test_mesh_manager_hub_operations(self):
         """Test hub creation and management through the mesh manager"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with AsyncSessionLocal() as db:
+            async with db_manager.SessionLocal() as db:
                 manager = MeshNetworkManager(db)
 
                 # Create mesh and node
@@ -118,11 +117,11 @@ class TestMeshManagerLibrary:
     @pytest.mark.asyncio
     async def test_mesh_manager_link_operations(self):
         """Test link operations through the mesh manager"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with AsyncSessionLocal() as db:
+            async with db_manager.SessionLocal() as db:
                 manager = MeshNetworkManager(db)
 
                 # Create mesh
@@ -169,11 +168,11 @@ class TestMeshManagerLibrary:
     @pytest.mark.asyncio
     async def test_mesh_manager_error_handling(self):
         """Test error handling in the mesh manager"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with AsyncSessionLocal() as db:
+            async with db_manager.SessionLocal() as db:
                 manager = MeshNetworkManager(db)
 
                 fake_uuid = "12345678-1234-5678-1234-567812345678"
@@ -198,11 +197,11 @@ class TestMeshManagerLibrary:
     @pytest.mark.asyncio
     async def test_mesh_manager_complete_workflow(self):
         """Test a complete workflow using the mesh manager"""
-        db_manager = TestDatabaseManager()
+        db_manager = DatabaseManager()
         await db_manager.setup()
 
         try:
-            async with AsyncSessionLocal() as db:
+            async with db_manager.SessionLocal() as db:
                 manager = MeshNetworkManager(db)
 
                 # Create mesh

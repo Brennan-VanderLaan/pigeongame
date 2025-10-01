@@ -1,6 +1,7 @@
 from typing import List
 from uuid import UUID
 import json
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -16,23 +17,29 @@ from database import get_db, init_db
 from mesh_manager import MeshNetworkManager
 from logging_config import setup_web_logging, get_component_logger
 
-app = FastAPI(
-    title="Mesh Network API",
-    description="API for managing mesh networks with nodes and hubs",
-    version="1.0.0"
-)
 
-# Mount static files (commented out - no static directory exists)
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.on_event("startup")
-async def startup_event():
-    # Setup structured logging for web application
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Setup structured logging for web application
     setup_web_logging()
     logger = get_component_logger("web")
     logger.info("Starting mesh network web application")
     await init_db()
     logger.info("Database initialization complete")
+    yield
+    # Shutdown: Add any cleanup code here if needed
+    logger.info("Shutting down mesh network web application")
+
+
+app = FastAPI(
+    title="Mesh Network API",
+    description="API for managing mesh networks with nodes and hubs",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Mount static files (commented out - no static directory exists)
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Initialize logger for web endpoints
 logger = get_component_logger("web")
