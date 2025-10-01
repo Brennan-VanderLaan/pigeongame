@@ -165,9 +165,104 @@
             padding: 20px;
             background-color: white;
         }
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        .polling-controls {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .quick-add-mode {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .quick-add-mode h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        .inline-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .inline-form input {
+            flex: 1;
+            min-width: 150px;
+        }
+        .node-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .clickable-node {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .clickable-node:hover {
+            background-color: #d4edda;
+        }
+        .context-menu {
+            position: fixed;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            padding: 8px 0;
+            z-index: 10000;
+            min-width: 180px;
+        }
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
+        .context-menu-item.danger {
+            color: #dc3545;
+        }
+        .context-menu-divider {
+            height: 1px;
+            background-color: #ddd;
+            margin: 4px 0;
+        }
     </style>
 </head>
 <body>
+    <!-- Auto-refresh indicator -->
+    <div id="refreshIndicator" class="refresh-indicator">
+        🔄 Data refreshed
+    </div>
+
+    <!-- Polling controls -->
+    <div class="polling-controls">
+        <button id="pollingToggle" class="btn btn-success" onclick="togglePolling()">⏸️ Pause Auto-Refresh</button>
+    </div>
+
     <div class="container">
         <h1>Mesh Network Visualizer</h1>
 
@@ -178,6 +273,9 @@
             <p style="margin-top: 10px; color: #666; font-size: 14px;">
                 <strong>Legend:</strong>
                 🔵 Nodes | 🟠 Hubs | ➡️ Hub-to-Hub Connections | ➡️ Node-to-Hub Links
+            </p>
+            <p style="margin-top: 5px; color: #0066cc; font-size: 13px;">
+                💡 <strong>Tip:</strong> Drag nodes onto hubs to link them | Right-click nodes for more options
             </p>
         </div>
 
@@ -216,23 +314,44 @@
                     <option value="">Select a mesh first</option>
                 </select>
             </div>
-            <div class="flex">
-                <div class="form-group">
-                    <label for="nodeName">Node Name:</label>
-                    <input type="text" id="nodeName" placeholder="Enter node name">
-                </div>
-                <div class="form-group">
-                    <label for="nodeAddrs">Addresses (comma-separated):</label>
-                    <input type="text" id="nodeAddrs" placeholder="192.168.1.1,10.0.0.1">
-                </div>
-                <div>
-                    <button class="btn" onclick="addNode()">Add Node</button>
-                </div>
+
+            <!-- Quick Add Mode Toggle -->
+            <div style="margin-bottom: 10px;">
+                <button class="btn" onclick="toggleQuickAddMode()">⚡ Quick Add Mode</button>
+                <small style="color: #666; margin-left: 10px;">Add multiple nodes quickly with simple format</small>
             </div>
-            <div class="form-group">
-                <label for="nodeData">Node Data (JSON):</label>
-                <textarea id="nodeData" placeholder='{"role": "web-server", "environment": "production", "cpu_cores": 4}' style="height: 80px; font-family: monospace;"></textarea>
-                <small style="color: #666; font-size: 12px;">Optional: Add JSON metadata for this node (e.g., server config, deployment info, tags)</small>
+
+            <!-- Quick Add Interface (hidden by default) -->
+            <div id="quickAddSection" class="quick-add-mode" style="display: none;">
+                <h3>⚡ Quick Add Nodes</h3>
+                <p style="margin: 5px 0; font-size: 13px;">Format: name,address1,address2,... (one per line)</p>
+                <textarea id="quickAddInput" placeholder="node1,10.0.0.1,192.168.1.1
+node2,10.0.0.2
+node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monospace; margin-bottom: 10px;"></textarea>
+                <button class="btn btn-success" onclick="quickAddNodes()">Add All Nodes</button>
+                <button class="btn" onclick="toggleQuickAddMode()">Cancel</button>
+            </div>
+
+            <!-- Standard Add Interface -->
+            <div id="standardAddSection">
+                <div class="flex">
+                    <div class="form-group">
+                        <label for="nodeName">Node Name:</label>
+                        <input type="text" id="nodeName" placeholder="Enter node name" onkeypress="if(event.key==='Enter') addNode()">
+                    </div>
+                    <div class="form-group">
+                        <label for="nodeAddrs">Addresses (comma-separated):</label>
+                        <input type="text" id="nodeAddrs" placeholder="192.168.1.1,10.0.0.1" onkeypress="if(event.key==='Enter') addNode()">
+                    </div>
+                    <div>
+                        <button class="btn" onclick="addNode()">Add Node</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="nodeData">Node Data (JSON):</label>
+                    <textarea id="nodeData" placeholder='{"role": "web-server", "environment": "production", "cpu_cores": 4}' style="height: 80px; font-family: monospace;"></textarea>
+                    <small style="color: #666; font-size: 12px;">Optional: Add JSON metadata for this node (e.g., server config, deployment info, tags)</small>
+                </div>
             </div>
 
             <div class="node-list" id="nodeList">
@@ -264,6 +383,9 @@
         <!-- Link Management -->
         <div class="section">
             <h2>Link Management</h2>
+            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                💡 <strong>Tip:</strong> Click on nodes/hubs above to auto-select them, or use dropdowns below
+            </p>
             <div class="flex">
                 <div class="form-group">
                     <label for="linkNodeSelect">Select Node:</label>
@@ -292,6 +414,9 @@
             <!-- Hub Connection Management -->
             <div class="section">
                 <h2>Hub-to-Hub Connections</h2>
+                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                    💡 <strong>Tip:</strong> Click on hubs in the Hub Management tab to auto-select them here
+                </p>
                 <div class="flex">
                     <div class="form-group">
                         <label for="sourceHubSelect">Source Hub:</label>
@@ -328,6 +453,9 @@
         let meshes = [];
         let nodes = [];
         let hubs = [];
+        let pollingInterval = null;
+        let pollingEnabled = true;
+        const POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
 
         function showMessage(message, isError = false) {
             const messagesDiv = document.getElementById('messages');
@@ -502,18 +630,99 @@
                 return;
             }
 
-            nodeListDiv.innerHTML = nodes.map(node => `
-                <div class="item">
-                    <h4>${node.name}</h4>
-                    <p>ID: ${node.id}</p>
-                    <p>Addresses: ${node.addrs.join(', ')}</p>
-                    ${Object.keys(node.data || {}).length > 0 ?
-                        `<p><strong>Data:</strong> <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 11px;">${JSON.stringify(node.data)}</code></p>` :
-                        '<p><em>No additional data</em></p>'
+            nodeListDiv.innerHTML = nodes.map(node => {
+                const isHub = hubs.some(hub => hub.node_id === node.id);
+                return `
+                    <div class="item clickable-node" onclick="selectNodeForAction('${node.id}')">
+                        <h4>${node.name} ${isHub ? '🔶 (Hub)' : ''}</h4>
+                        <p>ID: ${node.id}</p>
+                        <p>Addresses: ${node.addrs.join(', ')}</p>
+                        ${Object.keys(node.data || {}).length > 0 ?
+                            `<p><strong>Data:</strong> <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 11px;">${JSON.stringify(node.data)}</code></p>` :
+                            '<p><em>No additional data</em></p>'
+                        }
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); deleteNode('${node.id}')">Delete Node</button>
+                        ${!isHub ? `<button class="btn" onclick="event.stopPropagation(); quickMakeHub('${node.id}')">Make Hub</button>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectNodeForAction(nodeId) {
+            // Pre-select node in link dropdown
+            const linkNodeSelect = document.getElementById('linkNodeSelect');
+            if (linkNodeSelect) {
+                linkNodeSelect.value = nodeId;
+                showMessage('Node selected for linking', false);
+            }
+        }
+
+        function quickMakeHub(nodeId) {
+            document.getElementById('hubNodeSelect').value = nodeId;
+            createHub();
+        }
+
+        function toggleQuickAddMode() {
+            const quickSection = document.getElementById('quickAddSection');
+            const standardSection = document.getElementById('standardAddSection');
+
+            if (quickSection.style.display === 'none') {
+                quickSection.style.display = 'block';
+                standardSection.style.display = 'none';
+            } else {
+                quickSection.style.display = 'none';
+                standardSection.style.display = 'block';
+            }
+        }
+
+        async function quickAddNodes() {
+            if (!currentMeshId) {
+                showMessage('Please select a mesh first', true);
+                return;
+            }
+
+            const input = document.getElementById('quickAddInput').value.trim();
+            if (!input) {
+                showMessage('Please enter node data', true);
+                return;
+            }
+
+            const lines = input.split('\n').filter(line => line.trim());
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const line of lines) {
+                const parts = line.split(',').map(p => p.trim());
+                if (parts.length < 2) {
+                    showMessage(`Skipping invalid line: ${line}`, true);
+                    errorCount++;
+                    continue;
+                }
+
+                const name = parts[0];
+                const addrs = parts.slice(1);
+
+                try {
+                    const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/node`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({name, addrs, data: {}})
+                    });
+
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
                     }
-                    <button class="btn btn-danger" onclick="deleteNode('${node.id}')">Delete Node</button>
-                </div>
-            `).join('');
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+
+            showMessage(`Added ${successCount} nodes successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, errorCount > 0);
+            document.getElementById('quickAddInput').value = '';
+            toggleQuickAddMode();
+            selectMesh(currentMeshId); // Refresh
         }
 
         async function deleteNode(nodeId) {
@@ -601,19 +810,57 @@
             }
 
             hubListDiv.innerHTML = hubs.map(hub => `
-                <div class="item">
-                    <h4>${hub.name} (Hub)</h4>
+                <div class="item clickable-node" onclick="selectHubForAction('${hub.id}')">
+                    <h4>${hub.name} (Hub) 🔶</h4>
                     <p>ID: ${hub.id}</p>
                     <p>Node ID: ${hub.node_id}</p>
                     <p>Connected Spokes: ${hub.spokes.length}</p>
-                    ${hub.spokes.length > 0 ? '<p>Spokes: ' + hub.spokes.map(spoke => spoke.name).join(', ') + '</p>' : ''}
+                    ${hub.spokes.length > 0 ? '<p>Spokes: ' + hub.spokes.map(spoke =>
+                        `<span class="node-badge" onclick="event.stopPropagation(); unlinkSpokeQuick('${spoke.id}', '${hub.id}')" title="Click to unlink">${spoke.name} ✖</span>`
+                    ).join(' ') + '</p>' : ''}
                     ${hub.connected_hubs && hub.connected_hubs.length > 0 ?
                         '<div class="hub-connections"><h5>Connected Hubs:</h5>' +
                         hub.connected_hubs.map(connectedHub => `<div class="connection-item">${connectedHub.name}</div>`).join('') +
                         '</div>' : ''}
-                    <button class="btn btn-danger" onclick="deleteHub('${hub.id}')">Delete Hub</button>
+                    <button class="btn btn-danger" onclick="event.stopPropagation(); deleteHub('${hub.id}')">Delete Hub</button>
                 </div>
             `).join('');
+        }
+
+        function selectHubForAction(hubId) {
+            // Pre-select hub in link dropdown
+            const linkHubSelect = document.getElementById('linkHubSelect');
+            const sourceHubSelect = document.getElementById('sourceHubSelect');
+
+            if (linkHubSelect) {
+                linkHubSelect.value = hubId;
+            }
+            if (sourceHubSelect) {
+                sourceHubSelect.value = hubId;
+            }
+            showMessage('Hub selected for linking', false);
+        }
+
+        async function unlinkSpokeQuick(nodeId, hubId) {
+            if (!confirm('Unlink this spoke from the hub?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/unlink_from_hub`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({node_id: nodeId, hub_id: hubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Node unlinked successfully');
+                    selectMesh(currentMeshId);
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to unlink: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error unlinking node: ' + error.message, true);
+            }
         }
 
         function updateHubSelect() {
@@ -860,7 +1107,12 @@
                     },
                     stabilization: { iterations: 150 }
                 },
-                interaction: { dragNodes: true, dragView: true, zoomView: true },
+                interaction: {
+                    dragNodes: true,
+                    dragView: true,
+                    zoomView: true,
+                    navigationButtons: true
+                },
                 nodes: {
                     borderWidth: 2,
                     shadow: true,
@@ -877,8 +1129,129 @@
             }
             network = new vis.Network(container, data, options);
 
-            // Add click event for nodes
+            // Track drag state
+            let draggedNodeId = null;
+            let hoveredHubId = null;
+
+            // Drag start event
+            network.on('dragStart', function(params) {
+                if (params.nodes.length > 0) {
+                    draggedNodeId = params.nodes[0];
+                    // Disable physics for the dragged node so it can move freely
+                    data.nodes.update({id: draggedNodeId, physics: false});
+                }
+            });
+
+            // Dragging event - highlight hub when hovering
+            network.on('dragging', function(params) {
+                if (draggedNodeId) {
+                    const targetNodeId = network.getNodeAt(params.pointer.DOM);
+
+                    if (targetNodeId && targetNodeId !== draggedNodeId) {
+                        const targetHub = hubs.find(h => h.node_id === targetNodeId);
+                        const draggedHub = hubs.find(h => h.node_id === draggedNodeId);
+
+                        // If dragging a node over a hub (or hub over hub), highlight it
+                        if (targetHub && (!draggedHub || draggedNodeId !== targetNodeId)) {
+                            if (hoveredHubId !== targetNodeId) {
+                                // Remove previous highlight
+                                if (hoveredHubId) {
+                                    const wasHub = hubs.find(h => h.node_id === hoveredHubId);
+                                    data.nodes.update({
+                                        id: hoveredHubId,
+                                        color: '#ff9500',
+                                        borderWidth: 2
+                                    });
+                                }
+                                // Add new highlight
+                                hoveredHubId = targetNodeId;
+                                data.nodes.update({
+                                    id: targetNodeId,
+                                    color: '#00ff00',
+                                    borderWidth: 4
+                                });
+                            }
+                        } else {
+                            // Clear highlight if not over a valid hub
+                            if (hoveredHubId) {
+                                data.nodes.update({
+                                    id: hoveredHubId,
+                                    color: '#ff9500',
+                                    borderWidth: 2
+                                });
+                                hoveredHubId = null;
+                            }
+                        }
+                    } else {
+                        // Clear highlight if not over any node
+                        if (hoveredHubId) {
+                            data.nodes.update({
+                                id: hoveredHubId,
+                                color: '#ff9500',
+                                borderWidth: 2
+                            });
+                            hoveredHubId = null;
+                        }
+                    }
+                }
+            });
+
+            // Drag end event - handle linking when dropping on a hub
+            network.on('dragEnd', function(params) {
+                if (draggedNodeId) {
+                    // Re-enable physics for the dragged node
+                    data.nodes.update({id: draggedNodeId, physics: true});
+
+                    // Clear any hover highlight
+                    if (hoveredHubId) {
+                        data.nodes.update({
+                            id: hoveredHubId,
+                            color: '#ff9500',
+                            borderWidth: 2
+                        });
+                        hoveredHubId = null;
+                    }
+
+                    if (params.pointer.canvas) {
+                        const targetNodeId = network.getNodeAt(params.pointer.DOM);
+
+                        if (targetNodeId && targetNodeId !== draggedNodeId) {
+                            const draggedNode = nodes.find(n => n.id === draggedNodeId);
+                            const targetHub = hubs.find(h => h.node_id === targetNodeId);
+                            const draggedHub = hubs.find(h => h.node_id === draggedNodeId);
+
+                            // Case 1: Dragging a regular node onto a hub - link as spoke (no confirmation)
+                            if (draggedNode && targetHub && !draggedHub) {
+                                linkNodeToHubDirect(draggedNodeId, targetHub.id);
+                            }
+                            // Case 2: Dragging a hub onto another hub - connect hubs (no confirmation)
+                            else if (draggedHub && targetHub && draggedNodeId !== targetNodeId) {
+                                connectHubsDirect(draggedHub.id, targetHub.id);
+                            }
+                        }
+                    }
+                    draggedNodeId = null;
+                }
+            });
+
+            // Right-click context menu
+            network.on('oncontext', function(params) {
+                params.event.preventDefault();
+
+                const nodeId = network.getNodeAt(params.pointer.DOM);
+                if (nodeId) {
+                    const node = nodes.find(n => n.id === nodeId);
+                    const hub = hubs.find(h => h.node_id === nodeId);
+                    showContextMenu(params.pointer.DOM.x, params.pointer.DOM.y, node, hub);
+                } else {
+                    hideContextMenu();
+                }
+            });
+
+            // Click event to hide context menu
             network.on('click', function(params) {
+                hideContextMenu();
+
                 if (params.nodes.length > 0) {
                     const nodeId = params.nodes[0];
                     const node = nodes.find(n => n.id === nodeId);
@@ -951,8 +1324,344 @@
             }
         });
 
-        // Load meshes on page load
+        // Polling functions for auto-refresh
+        function startPolling() {
+            if (pollingInterval) return; // Already polling
+
+            pollingInterval = setInterval(async () => {
+                if (!pollingEnabled) return;
+
+                try {
+                    if (currentMeshId) {
+                        // Silently refresh current mesh data
+                        const response = await fetch(`${API_BASE}/mesh/${currentMeshId}`);
+                        if (response.ok) {
+                            const mesh = await response.json();
+                            const oldNodesJSON = JSON.stringify(nodes);
+                            const oldHubsJSON = JSON.stringify(hubs);
+
+                            nodes = mesh.nodes;
+                            hubs = mesh.hubs;
+
+                            const newNodesJSON = JSON.stringify(nodes);
+                            const newHubsJSON = JSON.stringify(hubs);
+
+                            // Update displays if data changed
+                            if (oldNodesJSON !== newNodesJSON || oldHubsJSON !== newHubsJSON) {
+                                displayNodes();
+                                displayHubs();
+                                updateNodeSelects();
+                                updateHubSelect();
+                                updateNetworkGraph();
+                                updateTopologyDisplay();
+
+                                // Show subtle notification
+                                showAutoRefreshIndicator();
+                            }
+                        }
+                    } else {
+                        // No mesh selected, poll for mesh list changes
+                        const response = await fetch(`${API_BASE}/mesh`);
+                        if (response.ok) {
+                            const newMeshes = await response.json();
+                            const oldMeshesJSON = JSON.stringify(meshes);
+                            const newMeshesJSON = JSON.stringify(newMeshes);
+
+                            if (oldMeshesJSON !== newMeshesJSON) {
+                                meshes = newMeshes;
+                                displayMeshes();
+                                updateMeshSelect();
+                                showAutoRefreshIndicator();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, POLL_INTERVAL_MS);
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        function togglePolling() {
+            pollingEnabled = !pollingEnabled;
+            const btn = document.getElementById('pollingToggle');
+            if (btn) {
+                btn.textContent = pollingEnabled ? '⏸️ Pause Auto-Refresh' : '▶️ Resume Auto-Refresh';
+                btn.className = pollingEnabled ? 'btn btn-success' : 'btn';
+            }
+
+            if (pollingEnabled) {
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        }
+
+        function showAutoRefreshIndicator() {
+            const indicator = document.getElementById('refreshIndicator');
+            if (indicator) {
+                indicator.style.opacity = '1';
+                setTimeout(() => {
+                    indicator.style.opacity = '0';
+                }, 1000);
+            }
+        }
+
+        // Enhanced selectMesh to start/stop polling
+        const originalSelectMeshFunc = selectMesh;
+        selectMesh = async function(meshId) {
+            await originalSelectMeshFunc(meshId);
+            startPolling(); // Start polling when a mesh is selected
+        };
+
+        // Context menu functions
+        function showContextMenu(x, y, node, hub) {
+            hideContextMenu(); // Remove any existing menu
+
+            const menu = document.createElement('div');
+            menu.id = 'contextMenu';
+            menu.className = 'context-menu';
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+
+            let menuHTML = '';
+
+            if (hub) {
+                // Hub context menu
+                menuHTML = `
+                    <div class="context-menu-item" onclick="viewNodeDetails('${node.id}')">
+                        ℹ️ View Details
+                    </div>
+                    <div class="context-menu-item" onclick="showConnectHubSubmenu('${hub.id}', '${hub.name}')">
+                        🔗 Connect to Hub...
+                    </div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" onclick="removeHubFromMenu('${hub.id}')">
+                        🔽 Demote to Node
+                    </div>
+                    <div class="context-menu-item danger" onclick="deleteNodeFromMenu('${node.id}')">
+                        🗑️ Delete Hub & Node
+                    </div>
+                `;
+            } else {
+                // Regular node context menu
+                menuHTML = `
+                    <div class="context-menu-item" onclick="viewNodeDetails('${node.id}')">
+                        ℹ️ View Details
+                    </div>
+                    <div class="context-menu-item" onclick="showLinkToHubSubmenu('${node.id}', '${node.name}')">
+                        🔗 Link to Hub...
+                    </div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" onclick="quickMakeHub('${node.id}')">
+                        ⬆️ Promote to Hub
+                    </div>
+                    <div class="context-menu-item danger" onclick="deleteNodeFromMenu('${node.id}')">
+                        🗑️ Delete Node
+                    </div>
+                `;
+            }
+
+            menu.innerHTML = menuHTML;
+            document.body.appendChild(menu);
+
+            // Close menu when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', hideContextMenu, { once: true });
+            }, 0);
+        }
+
+        function hideContextMenu() {
+            const menu = document.getElementById('contextMenu');
+            if (menu) {
+                menu.remove();
+            }
+        }
+
+        function showLinkToHubSubmenu(nodeId, nodeName) {
+            const menu = document.getElementById('contextMenu');
+            if (!menu) return;
+
+            const availableHubs = hubs.filter(h => {
+                // Don't show hubs this node is already connected to
+                return !h.spokes.some(s => s.id === nodeId);
+            });
+
+            if (availableHubs.length === 0) {
+                menu.innerHTML = `
+                    <div class="context-menu-item" onclick="hideContextMenu()">
+                        ← Back
+                    </div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" style="color: #999; cursor: default;">
+                        No hubs available
+                    </div>
+                `;
+                return;
+            }
+
+            let submenuHTML = `
+                <div class="context-menu-item" onclick="showContextMenu(${menu.style.left.replace('px', '')}, ${menu.style.top.replace('px', '')}, nodes.find(n => n.id === '${nodeId}'), null)">
+                    ← Back
+                </div>
+                <div class="context-menu-divider"></div>
+            `;
+
+            availableHubs.forEach(hub => {
+                submenuHTML += `
+                    <div class="context-menu-item" onclick="linkNodeToHubDirect('${nodeId}', '${hub.id}'); hideContextMenu();">
+                        🔗 ${hub.name}
+                    </div>
+                `;
+            });
+
+            menu.innerHTML = submenuHTML;
+        }
+
+        function showConnectHubSubmenu(sourceHubId, sourceHubName) {
+            const menu = document.getElementById('contextMenu');
+            if (!menu) return;
+
+            const sourceHub = hubs.find(h => h.id === sourceHubId);
+            const connectedHubIds = new Set(sourceHub.connected_hubs?.map(h => h.id) || []);
+
+            const availableHubs = hubs.filter(h => {
+                // Don't show the source hub itself or already connected hubs
+                return h.id !== sourceHubId && !connectedHubIds.has(h.id);
+            });
+
+            if (availableHubs.length === 0) {
+                menu.innerHTML = `
+                    <div class="context-menu-item" onclick="hideContextMenu()">
+                        ← Back
+                    </div>
+                    <div class="context-menu-divider"></div>
+                    <div class="context-menu-item" style="color: #999; cursor: default;">
+                        No hubs available
+                    </div>
+                `;
+                return;
+            }
+
+            const node = nodes.find(n => n.id === sourceHub.node_id);
+            let submenuHTML = `
+                <div class="context-menu-item" onclick="showContextMenu(${menu.style.left.replace('px', '')}, ${menu.style.top.replace('px', '')}, nodes.find(n => n.id === '${node.id}'), hubs.find(h => h.id === '${sourceHubId}'))">
+                    ← Back
+                </div>
+                <div class="context-menu-divider"></div>
+            `;
+
+            availableHubs.forEach(hub => {
+                submenuHTML += `
+                    <div class="context-menu-item" onclick="connectHubsDirect('${sourceHubId}', '${hub.id}'); hideContextMenu();">
+                        🔗 ${hub.name}
+                    </div>
+                `;
+            });
+
+            menu.innerHTML = submenuHTML;
+        }
+
+        function deleteNodeFromMenu(nodeId) {
+            hideContextMenu();
+            deleteNode(nodeId);
+        }
+
+        function removeHubFromMenu(hubId) {
+            hideContextMenu();
+            if (confirm('Remove hub status? This will disconnect all spokes.')) {
+                deleteHub(hubId);
+            }
+        }
+
+        function viewNodeDetails(nodeId) {
+            hideContextMenu();
+            const node = nodes.find(n => n.id === nodeId);
+            const hub = hubs.find(h => h.node_id === nodeId);
+
+            let details = `Name: ${node.name}\nID: ${node.id}\nAddresses: ${node.addrs.join(', ')}`;
+
+            if (node.data && Object.keys(node.data).length > 0) {
+                details += `\n\nData:\n${JSON.stringify(node.data, null, 2)}`;
+            }
+
+            if (hub) {
+                details += `\n\nHub Info:\nSpokes: ${hub.spokes.length}`;
+                if (hub.connected_hubs && hub.connected_hubs.length > 0) {
+                    details += `\nConnected Hubs: ${hub.connected_hubs.map(h => h.name).join(', ')}`;
+                }
+            }
+
+            alert(details);
+        }
+
+        // Direct linking functions for drag-and-drop
+        async function linkNodeToHubDirect(nodeId, hubId) {
+            if (!currentMeshId) {
+                showMessage('No mesh selected', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/link_to_hub`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({node_id: nodeId, hub_id: hubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Node linked to hub successfully');
+                    selectMesh(currentMeshId);
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to link: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error linking node: ' + error.message, true);
+            }
+        }
+
+        async function connectHubsDirect(sourceHubId, targetHubId) {
+            if (!currentMeshId) {
+                showMessage('No mesh selected', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/connect_hubs`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({source_hub_id: sourceHubId, target_hub_id: targetHubId})
+                });
+
+                if (response.ok) {
+                    showMessage('Hubs connected successfully');
+                    selectMesh(currentMeshId);
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to connect hubs: ' + (error.detail || 'Unknown error'), true);
+                }
+            } catch (error) {
+                showMessage('Error connecting hubs: ' + error.message, true);
+            }
+        }
+
+        // Hide context menu on canvas click
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.context-menu')) {
+                hideContextMenu();
+            }
+        });
+
+        // Load meshes on page load and start polling
         loadMeshes();
+        startPolling();
     </script>
 </body>
 </html>
