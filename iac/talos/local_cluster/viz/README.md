@@ -1,19 +1,22 @@
 # Mesh Network Visualizer
 
-A FastAPI-based REST server for managing mesh networks with nodes and hubs, featuring both a web interface and a kubectl-style CLI.
+A FastAPI-based REST server for managing mesh networks with nodes and hubs, featuring an interactive web UI with real-time visualization and a kubectl-style CLI for automation.
 
 ## Features
 
-- Create and manage mesh networks
-- Add nodes to meshes with multiple network addresses
+### Core Functionality
+- Create and manage multiple mesh networks
+- Add nodes with multiple network addresses and JSON metadata
 - Promote nodes to hubs for network coordination
-- Create spoke connections between nodes and hubs
-- Interactive web interface for visualization and management
-- kubectl-style CLI for operators and automation (ish)
-- Full REST API with automatic OpenAPI documentation
+- Create spoke connections (node-to-hub) and hub-to-hub connections
 - SQLite database for persistent storage
-- Structured logging
-- Comprehensive unit tests
+- Full REST API with automatic OpenAPI documentation
+
+### kubectl-Style CLI
+- Familiar command structure for operators and automation
+- JSON and table output formats
+- Quiet mode for scripting
+- Proper exit codes for CI/CD integration
 
 ## Installation
 
@@ -194,8 +197,10 @@ Once the server is running, visit:
 - `DELETE /mesh/{mesh_id}/hub/{hub_id}` - Remove hub
 
 ### Link Management
-- `POST /mesh/{mesh_id}/link_to_hub` - Connect node to hub
+- `POST /mesh/{mesh_id}/link_to_hub` - Connect node to hub (spoke)
 - `POST /mesh/{mesh_id}/unlink_from_hub` - Disconnect node from hub
+- `POST /mesh/{mesh_id}/connect_hubs` - Connect two hubs together
+- `POST /mesh/{mesh_id}/disconnect_hubs` - Disconnect two hubs
 
 ## Data Models
 
@@ -209,12 +214,14 @@ Once the server is running, visit:
 - `id`: UUID
 - `name`: string
 - `addrs`: list of network addresses
+- `data`: optional JSON metadata object
 
 ### Hub
 - `id`: UUID
 - `name`: string (inherited from node)
 - `node_id`: UUID of the underlying node
 - `spokes`: list of connected nodes
+- `connected_hubs`: list of other hubs this hub connects to
 
 ## Testing
 
@@ -223,14 +230,33 @@ Run the test suite:
 pytest tests/
 ```
 
+## Web UI Usage
+
+The web interface provides an intuitive way to manage mesh networks:
+
+1. **Creating a Mesh**: Enter a name and click "Create Mesh"
+2. **Adding Nodes**:
+   - Select a mesh, enter node name and addresses (comma-separated)
+   - Optional: Add JSON metadata for custom fields
+   - Or use Quick Add Mode for batch CSV-like input: `name,addr1,addr2,...`
+3. **Creating Hubs**: Click "Make Hub" on any node or use the Hub Management section
+4. **Linking Nodes to Hubs**:
+   - **Drag & Drop**: Drag a node over a hub (hub turns green), drop to link
+   - **Context Menu**: Right-click node → select from available hubs
+5. **Connecting Hubs**: Drag one hub onto another hub to create hub-to-hub connection
+6. **Graph Interaction**:
+   - Drag nodes to rearrange (positions preserved during updates)
+   - Right-click for context menu (view details, promote/demote, delete)
+   - Click to see connection info
+   - Toggle auto-refresh to pause/resume polling
+
 ## Development
 
 The server uses:
-- FastAPI for the REST API
-- SQLAlchemy with async SQLite for data persistence
-- Pydantic for data validation
-- pytest for testing
-- uvicorn for the ASGI server
+- **Backend**: FastAPI, SQLAlchemy (async SQLite), Pydantic
+- **Frontend**: Vanilla JS, vis.js for network visualization
+- **Testing**: pytest with comprehensive unit and integration tests
+- **Server**: uvicorn ASGI server
 
 File structure:
 ```
