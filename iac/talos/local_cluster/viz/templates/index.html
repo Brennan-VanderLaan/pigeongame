@@ -118,7 +118,7 @@
         }
         #networkGraph {
             width: 100%;
-            height: 400px;
+            height: 800px;
             border: 1px solid #ddd;
             border-radius: 4px;
             background-color: #fafafa;
@@ -1162,13 +1162,35 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                     draggedNodeId = params.nodes[0];
                     // Disable physics for the dragged node so it can move freely
                     data.nodes.update({id: draggedNodeId, physics: false});
+                    // Freeze the entire graph while dragging
+                    network.setOptions({ physics: { enabled: false } });
                 }
             });
 
             // Dragging event - highlight hub when hovering
             network.on('dragging', function(params) {
                 if (draggedNodeId) {
-                    const targetNodeId = network.getNodeAt(params.pointer.DOM);
+                    // Use canvas coordinates for more reliable node detection
+                    const canvasPos = params.pointer.canvas;
+                    let targetNodeId = null;
+
+                    // Find the closest node to the pointer within a reasonable distance
+                    let minDistance = 50; // pixels - detection radius
+                    const positions = network.getPositions();
+
+                    Object.keys(positions).forEach(nodeId => {
+                        if (nodeId !== draggedNodeId) {
+                            const pos = positions[nodeId];
+                            const dx = pos.x - canvasPos.x;
+                            const dy = pos.y - canvasPos.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                targetNodeId = nodeId;
+                            }
+                        }
+                    });
 
                     if (targetNodeId && targetNodeId !== draggedNodeId) {
                         const targetHub = hubs.find(h => h.node_id === targetNodeId);
@@ -1222,6 +1244,9 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
             // Drag end event - handle linking when dropping on a hub
             network.on('dragEnd', function(params) {
                 if (draggedNodeId) {
+                    // Re-enable physics for the graph
+                    network.setOptions({ physics: { enabled: true } });
+
                     // Re-enable physics for the dragged node
                     data.nodes.update({id: draggedNodeId, physics: true});
 
@@ -1232,11 +1257,32 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                             color: '#ff9500',
                             borderWidth: 2
                         });
-                        hoveredHubId = null;
                     }
 
                     if (params.pointer.canvas) {
-                        const targetNodeId = network.getNodeAt(params.pointer.DOM);
+                        // Use the hovered hub ID if we have it (most reliable)
+                        let targetNodeId = hoveredHubId;
+
+                        // If no hover detected, do a final distance check
+                        if (!targetNodeId) {
+                            const canvasPos = params.pointer.canvas;
+                            let minDistance = 50; // pixels - detection radius
+                            const positions = network.getPositions();
+
+                            Object.keys(positions).forEach(nodeId => {
+                                if (nodeId !== draggedNodeId) {
+                                    const pos = positions[nodeId];
+                                    const dx = pos.x - canvasPos.x;
+                                    const dy = pos.y - canvasPos.y;
+                                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                                    if (distance < minDistance) {
+                                        minDistance = distance;
+                                        targetNodeId = nodeId;
+                                    }
+                                }
+                            });
+                        }
 
                         if (targetNodeId && targetNodeId !== draggedNodeId) {
                             const draggedNode = nodes.find(n => n.id === draggedNodeId);
@@ -1253,6 +1299,8 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                             }
                         }
                     }
+
+                    hoveredHubId = null;
                     draggedNodeId = null;
                 }
             });
