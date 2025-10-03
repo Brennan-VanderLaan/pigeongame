@@ -38,8 +38,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Mount static files (commented out - no static directory exists)
-# app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Initialize logger for web endpoints
 logger = get_component_logger("web")
