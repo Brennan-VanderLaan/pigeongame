@@ -69,9 +69,12 @@
                     <label for="meshName">Mesh Name:</label>
                     <input type="text" id="meshName" placeholder="Enter mesh name">
                 </div>
-                <div>
-                    <button class="btn" onclick="createMesh()">Create Mesh</button>
-                    <button class="btn" onclick="loadMeshes()">Refresh List</button>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn" onclick="createMesh()">Create Mesh</button>
+                        <button class="btn" onclick="loadMeshes()">Refresh List</button>
+                    </div>
                 </div>
             </div>
 
@@ -144,9 +147,12 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                         <option value="">Select a node</option>
                     </select>
                 </div>
-                <div>
-                    <button class="btn" onclick="createHub()">Create Hub</button>
-                    <button class="btn" onclick="loadHubs()">Refresh Hubs</button>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn" onclick="createHub()">Create Hub</button>
+                        <button class="btn" onclick="loadHubs()">Refresh Hubs</button>
+                    </div>
                 </div>
             </div>
 
@@ -174,9 +180,12 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                         <option value="">Select a hub</option>
                     </select>
                 </div>
-                <div>
-                    <button class="btn btn-success" onclick="linkToHub()">Link to Hub</button>
-                    <button class="btn btn-danger" onclick="unlinkFromHub()">Unlink from Hub</button>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn btn-success" onclick="linkToHub()">Link to Hub</button>
+                        <button class="btn btn-danger" onclick="unlinkFromHub()">Unlink from Hub</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -203,9 +212,12 @@ node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monos
                             <option value="">Select target hub</option>
                         </select>
                     </div>
-                    <div>
-                        <button class="btn btn-success" onclick="connectHubs()">Connect Hubs</button>
-                        <button class="btn btn-danger" onclick="disconnectHubs()">Disconnect Hubs</button>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div>
+                            <button class="btn btn-success" onclick="connectHubs()">Connect Hubs</button>
+                            <button class="btn btn-danger" onclick="disconnectHubs()">Disconnect Hubs</button>
+                        </div>
                     </div>
                 </div>
             </div>

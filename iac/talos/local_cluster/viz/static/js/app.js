@@ -201,7 +201,7 @@ function displayNodes() {
                 <p>ID: ${node.id}</p>
                 <p>Addresses: ${node.addrs.join(', ')}</p>
                 ${Object.keys(node.data || {}).length > 0 ?
-                    `<p><strong>Data:</strong> <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 11px;">${JSON.stringify(node.data)}</code></p>` :
+                    `<p><strong>Data:</strong> <code>${JSON.stringify(node.data)}</code></p>` :
                     '<p><em>No additional data</em></p>'
                 }
                 <button class="btn btn-danger" onclick="event.stopPropagation(); deleteNode('${node.id}')">Delete Node</button>

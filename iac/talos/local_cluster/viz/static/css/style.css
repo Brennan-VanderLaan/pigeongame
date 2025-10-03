@@ -213,7 +213,19 @@ body {
 .flex {
     display: flex;
     gap: 10px;
-    align-items: end;
+    align-items: flex-end;
+}
+
+.flex .form-group {
+    margin-bottom: 0;
+}
+
+.flex .btn {
+    margin-bottom: 0;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 .flex > div {
     flex: 1;
