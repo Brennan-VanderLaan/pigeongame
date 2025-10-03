@@ -67,12 +67,12 @@ function displayMeshes() {
     }
 
     meshListDiv.innerHTML = meshes.map(mesh => `
-        <div class="item">
-            <h4>${mesh.name}</h4>
-            <p>ID: ${mesh.id}</p>
-            <p>Nodes: ${mesh.nodes.length}, Hubs: ${mesh.hubs.length}</p>
-            <button class="btn" onclick="selectMesh('${mesh.id}')">Select</button>
-            <button class="btn btn-danger" onclick="deleteMesh('${mesh.id}')">Delete</button>
+        <div class="item compact-item">
+            <h4>${mesh.name} <small style="color: #666;">(${mesh.nodes.length} nodes, ${mesh.hubs.length} hubs)</small></h4>
+            <div class="inline-actions">
+                <button class="btn" onclick="selectMesh('${mesh.id}')">Select</button>
+                <button class="btn btn-danger" onclick="deleteMesh('${mesh.id}')">Delete</button>
+            </div>
         </div>
     `).join('');
 }
@@ -196,16 +196,14 @@ function displayNodes() {
     nodeListDiv.innerHTML = nodes.map(node => {
         const isHub = hubs.some(hub => hub.node_id === node.id);
         return `
-            <div class="item clickable-node" onclick="selectNodeForAction('${node.id}')">
-                <h4>${node.name} ${isHub ? '🔶 (Hub)' : ''}</h4>
-                <p>ID: ${node.id}</p>
-                <p>Addresses: ${node.addrs.join(', ')}</p>
-                ${Object.keys(node.data || {}).length > 0 ?
-                    `<p><strong>Data:</strong> <code>${JSON.stringify(node.data)}</code></p>` :
-                    '<p><em>No additional data</em></p>'
-                }
-                <button class="btn btn-danger" onclick="event.stopPropagation(); deleteNode('${node.id}')">Delete Node</button>
-                ${!isHub ? `<button class="btn" onclick="event.stopPropagation(); quickMakeHub('${node.id}')">Make Hub</button>` : ''}
+            <div class="item compact-item clickable-node" onclick="selectNodeForAction('${node.id}')">
+                <h4>${node.name} ${isHub ? '🔶' : ''} <small style="color: #888;">${node.addrs[0] || ''}</small></h4>
+                ${node.addrs.length > 1 ? `<p style="font-size: 0.65rem; color: #666;">+${node.addrs.length - 1} more addr</p>` : ''}
+                ${Object.keys(node.data || {}).length > 0 ? `<p><code style="font-size: 0.65rem;">${JSON.stringify(node.data).substring(0, 40)}...</code></p>` : ''}
+                <div class="inline-actions">
+                    <button class="btn btn-danger" onclick="event.stopPropagation(); deleteNode('${node.id}')">Delete</button>
+                    ${!isHub ? `<button class="btn" onclick="event.stopPropagation(); quickMakeHub('${node.id}')">→ Hub</button>` : ''}
+                </div>
             </div>
         `;
     }).join('');
@@ -373,19 +371,16 @@ function displayHubs() {
     }
 
     hubListDiv.innerHTML = hubs.map(hub => `
-        <div class="item clickable-node" onclick="selectHubForAction('${hub.id}')">
-            <h4>${hub.name} (Hub) 🔶</h4>
-            <p>ID: ${hub.id}</p>
-            <p>Node ID: ${hub.node_id}</p>
-            <p>Connected Spokes: ${hub.spokes.length}</p>
-            ${hub.spokes.length > 0 ? '<p>Spokes: ' + hub.spokes.map(spoke =>
+        <div class="item compact-item clickable-node" onclick="selectHubForAction('${hub.id}')">
+            <h4>🔶 ${hub.name} <small style="color: #888;">(${hub.spokes.length} spokes${hub.connected_hubs && hub.connected_hubs.length > 0 ? `, ${hub.connected_hubs.length} hubs` : ''})</small></h4>
+            ${hub.spokes.length > 0 ? '<p style="margin: 2px 0;">' + hub.spokes.map(spoke =>
                 `<span class="node-badge" onclick="event.stopPropagation(); unlinkSpokeQuick('${spoke.id}', '${hub.id}')" title="Click to unlink">${spoke.name} ✖</span>`
             ).join(' ') + '</p>' : ''}
             ${hub.connected_hubs && hub.connected_hubs.length > 0 ?
-                '<div class="hub-connections"><h5>Connected Hubs:</h5>' +
-                hub.connected_hubs.map(connectedHub => `<div class="connection-item">${connectedHub.name}</div>`).join('') +
-                '</div>' : ''}
-            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteHub('${hub.id}')">Delete Hub</button>
+                '<p style="margin: 2px 0;"><small style="color: #ef4444;">⟷ ' + hub.connected_hubs.map(h => h.name).join(', ') + '</small></p>' : ''}
+            <div class="inline-actions">
+                <button class="btn btn-danger" onclick="event.stopPropagation(); deleteHub('${hub.id}')">Delete Hub</button>
+            </div>
         </div>
     `).join('');
 }
@@ -622,13 +617,13 @@ function updateNetworkGraph() {
                 }
             },
             shape: isHub ? 'hexagon' : 'dot',
-            size: isHub ? 30 : 20,
+            size: isHub ? 20 : 15,
             font: {
                 color: '#ffffff',
-                size: 14,
+                size: 11,
                 face: 'arial',
                 background: 'rgba(0, 0, 0, 0.7)',
-                strokeWidth: 3,
+                strokeWidth: 2,
                 strokeColor: '#000000'
             }
         });
@@ -647,13 +642,13 @@ function updateNetworkGraph() {
                         from: hub.node_id,
                         to: connectedHub.node_id,
                         color: { color: '#ef4444', highlight: '#ff0000' },
-                        width: 3,
+                        width: 2,
                         arrows: { to: { enabled: false } },
                         dashes: false,
-                        length: 500,
-                        label: `${hubNode?.addrs[0] || hubNode?.name || ''} <----> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
+                        length: 400,
+                        label: `${hubNode?.addrs[0] || hubNode?.name || ''} <-> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
                         font: {
-                            size: 11,
+                            size: 9,
                             color: '#e5e7eb',
                             align: 'middle',
                             background: 'rgba(0, 0, 0, 0.8)',
@@ -674,13 +669,13 @@ function updateNetworkGraph() {
                     from: spoke.id,
                     to: hub.node_id,
                     color: { color: '#10b981', highlight: '#059669' },
-                    width: 2,
-                    arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                    width: 1.5,
+                    arrows: { to: { enabled: true, scaleFactor: 0.4 } },
                     dashes: true,
-                    length: 250,
+                    length: 200,
                     label: `${spokeNode?.addrs[0] || spokeNode?.name || ''} → ${hubNode?.addrs[0] || hubNode?.name || ''}`,
                     font: {
-                        size: 11,
+                        size: 9,
                         color: '#e5e7eb',
                         align: 'middle',
                         background: 'rgba(0, 0, 0, 0.8)',
@@ -699,12 +694,12 @@ function updateNetworkGraph() {
             enabled: true,
             solver: 'forceAtlas2Based',
             forceAtlas2Based: {
-                gravitationalConstant: -26,
+                gravitationalConstant: -20,
                 centralGravity: 0.005,
-                springLength: 230,
-                springConstant: 0.18
+                springLength: 180,
+                springConstant: 0.2
             },
-            stabilization: { iterations: 150 }
+            stabilization: { iterations: 100 }
         },
         interaction: {
             dragNodes: true,
@@ -713,15 +708,15 @@ function updateNetworkGraph() {
             navigationButtons: false
         },
         nodes: {
-            borderWidth: 3,
+            borderWidth: 2,
             shadow: {
                 enabled: true,
                 color: 'rgba(0, 212, 255, 0.5)',
-                size: 10,
+                size: 6,
                 x: 0,
                 y: 0
             },
-            font: { size: 14, face: 'arial' }
+            font: { size: 11, face: 'arial' }
         },
         edges: {
             shadow: {
@@ -953,11 +948,11 @@ function updateTopologyDisplay() {
     let html = '';
     hubs.forEach(hub => {
         html += `
-            <div class="item">
-                <h4>${hub.name} (Hub)</h4>
+            <div class="item compact-item">
+                <h4>🔶 ${hub.name}</h4>
                 <p><strong>Spokes:</strong> ${hub.spokes.length > 0 ? hub.spokes.map(s => s.name).join(', ') : 'None'}</p>
-                <p><strong>Connected Hubs:</strong> ${hub.connected_hubs && hub.connected_hubs.length > 0 ?
-                    hub.connected_hubs.map(h => h.name).join(', ') : 'None'}</p>
+                ${hub.connected_hubs && hub.connected_hubs.length > 0 ?
+                    `<p><strong>⟷ Hubs:</strong> ${hub.connected_hubs.map(h => h.name).join(', ')}</p>` : ''}
             </div>
         `;
     });
@@ -1041,7 +1036,7 @@ function togglePolling() {
     pollingEnabled = !pollingEnabled;
     const btn = document.getElementById('pollingToggle');
     if (btn) {
-        btn.textContent = pollingEnabled ? '⏸️ Pause Auto-Refresh' : '▶️ Resume Auto-Refresh';
+        btn.textContent = pollingEnabled ? '⏸ Pause' : '▶ Resume';
         btn.className = pollingEnabled ? 'btn btn-success' : 'btn';
     }
 
@@ -1446,13 +1441,13 @@ function updateNetworkGraphIncremental() {
                 }
             },
             shape: isHub ? 'hexagon' : 'dot',
-            size: isHub ? 30 : 20,
+            size: isHub ? 20 : 15,
             font: {
                 color: '#ffffff',
-                size: 14,
+                size: 11,
                 face: 'arial',
                 background: 'rgba(0, 0, 0, 0.7)',
-                strokeWidth: 3,
+                strokeWidth: 2,
                 strokeColor: '#000000'
             }
         };
@@ -1479,13 +1474,13 @@ function updateNetworkGraphIncremental() {
                         from: hub.node_id,
                         to: connectedHub.node_id,
                         color: { color: '#ef4444', highlight: '#ff0000' },
-                        width: 3,
+                        width: 2,
                         arrows: { to: { enabled: false } },
                         dashes: false,
-                        length: 500,
+                        length: 400,
                         label: `${hubNode?.addrs[0] || hubNode?.name || ''} <-> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
                         font: {
-                            size: 11,
+                            size: 9,
                             color: '#e5e7eb',
                             align: 'middle',
                             background: 'rgba(0, 0, 0, 0.8)',
@@ -1505,13 +1500,13 @@ function updateNetworkGraphIncremental() {
                     from: spoke.id,
                     to: hub.node_id,
                     color: { color: '#10b981', highlight: '#059669' },
-                    width: 2,
-                    arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                    width: 1.5,
+                    arrows: { to: { enabled: true, scaleFactor: 0.4 } },
                     dashes: true,
-                    length: 250,
+                    length: 200,
                     label: `${spokeNode?.addrs[0] || spokeNode?.name || ''} → ${hubNode?.addrs[0] || hubNode?.name || ''}`,
                     font: {
-                        size: 11,
+                        size: 9,
                         color: '#e5e7eb',
                         align: 'middle',
                         background: 'rgba(0, 0, 0, 0.8)',

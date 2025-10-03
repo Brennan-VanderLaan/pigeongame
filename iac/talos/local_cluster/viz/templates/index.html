@@ -10,24 +10,23 @@
 <body>
     <!-- Auto-refresh indicator -->
     <div id="refreshIndicator" class="refresh-indicator">
-        🔄 Data refreshed
+        Refreshed
     </div>
 
     <!-- Polling controls -->
     <div class="polling-controls">
-        <button id="pollingToggle" class="btn btn-success" onclick="togglePolling()">⏸️ Pause Auto-Refresh</button>
+        <button id="pollingToggle" class="btn btn-success" onclick="togglePolling()">⏸ Pause</button>
     </div>
 
     <div class="container">
         <h1>Mesh Network Visualizer</h1>
-        <p class="subtitle">IP over Avian Carriers - RFC 1149 Network Management</p>
 
         <!-- Messages at the top -->
         <div id="messages"></div>
 
         <!-- Graph Visualization with Details Panel -->
         <div class="section graph-container">
-            <h2>Network Topology Graph</h2>
+            <h2>Topology</h2>
             <div class="graph-with-details">
                 <div id="networkGraph"></div>
                 <div class="graph-controls">
@@ -45,188 +44,186 @@
                     </div>
                 </div>
             </div>
-            <p style="margin-top: 10px; color: #666; font-size: 14px;">
-                <strong>Legend:</strong>
-                🔵 Nodes | 🟠 Hubs | ➡️ Hub-to-Hub Connections | ➡️ Node-to-Hub Links
-            </p>
-            <p style="margin-top: 5px; color: #0066cc; font-size: 13px;">
-                💡 <strong>Tip:</strong> Drag nodes onto hubs to link them | Right-click nodes for more options
+            <p style="margin: 4px 0 0 0; color: #666; font-size: 10px;">
+                <strong>Legend:</strong> Blue=Nodes | Orange=Hubs | Red=Hub↔Hub | Green=Node→Hub
+                <span style="margin-left: 10px; color: #0066cc;">Drag to link | Right-click for options</span>
             </p>
         </div>
 
         <!-- Tab Navigation -->
         <div class="tab-container">
             <div class="tab active" onclick="switchTab('management')">Management</div>
-            <div class="tab" onclick="switchTab('topology')">Hub Topology</div>
+            <div class="tab" onclick="switchTab('topology')">Hubs</div>
         </div>
 
         <div id="managementTab" class="tab-content">
-            <!-- Mesh Management -->
-        <div class="section">
-            <h2>Mesh Management</h2>
-            <div class="flex">
-                <div class="form-group">
-                    <label for="meshName">Mesh Name:</label>
-                    <input type="text" id="meshName" placeholder="Enter mesh name">
-                </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <div>
-                        <button class="btn" onclick="createMesh()">Create Mesh</button>
-                        <button class="btn" onclick="loadMeshes()">Refresh List</button>
+            <div class="grid-2col">
+                <!-- Left Column -->
+                <div>
+                    <!-- Mesh Management -->
+                    <div class="section">
+                        <h2>Meshes</h2>
+                        <div class="flex">
+                            <div class="form-group">
+                                <label for="meshName">Name:</label>
+                                <input type="text" id="meshName" placeholder="mesh name">
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div>
+                                    <button class="btn" onclick="createMesh()">Create</button>
+                                    <button class="btn" onclick="loadMeshes()">Refresh</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mesh-list" id="meshList">
+                            <p>No meshes</p>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="mesh-list" id="meshList">
-                <p>Click "Refresh List" to load meshes</p>
-            </div>
-        </div>
+                    <!-- Node Management -->
+                    <div class="section">
+                        <h2>Nodes</h2>
+                        <div class="form-group">
+                            <label for="selectedMesh">Mesh:</label>
+                            <select id="selectedMesh">
+                                <option value="">Select mesh</option>
+                            </select>
+                        </div>
 
-        <!-- Node Management -->
-        <div class="section">
-            <h2>Node Management</h2>
-            <div class="form-group">
-                <label for="selectedMesh">Select Mesh:</label>
-                <select id="selectedMesh">
-                    <option value="">Select a mesh first</option>
-                </select>
-            </div>
+                        <!-- Quick Add Mode Toggle -->
+                        <div style="margin-bottom: 6px;">
+                            <button class="btn" onclick="toggleQuickAddMode()">Bulk Add</button>
+                        </div>
 
-            <!-- Quick Add Mode Toggle -->
-            <div style="margin-bottom: 10px;">
-                <button class="btn" onclick="toggleQuickAddMode()">⚡ Quick Add Mode</button>
-                <small style="color: #666; margin-left: 10px;">Add multiple nodes quickly with simple format</small>
-            </div>
-
-            <!-- Quick Add Interface (hidden by default) -->
-            <div id="quickAddSection" class="quick-add-mode" style="display: none;">
-                <h3>⚡ Quick Add Nodes</h3>
-                <p style="margin: 5px 0; font-size: 13px;">Format: name,address1,address2,... (one per line)</p>
-                <textarea id="quickAddInput" placeholder="node1,10.0.0.1,192.168.1.1
+                        <!-- Quick Add Interface (hidden by default) -->
+                        <div id="quickAddSection" class="quick-add-mode" style="display: none;">
+                            <h3>Bulk Add</h3>
+                            <p style="margin: 2px 0; font-size: 0.7rem;">name,addr1,addr2,...</p>
+                            <textarea id="quickAddInput" placeholder="node1,10.0.0.1,192.168.1.1
 node2,10.0.0.2
-node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 100px; font-family: monospace; margin-bottom: 10px;"></textarea>
-                <button class="btn btn-success" onclick="quickAddNodes()">Add All Nodes</button>
-                <button class="btn" onclick="toggleQuickAddMode()">Cancel</button>
-            </div>
+node3,10.0.0.3,172.16.0.1" style="width: 100%; height: 60px; font-family: monospace; margin-bottom: 6px; font-size: 0.7rem;"></textarea>
+                            <button class="btn btn-success" onclick="quickAddNodes()">Add</button>
+                            <button class="btn" onclick="toggleQuickAddMode()">Cancel</button>
+                        </div>
 
-            <!-- Standard Add Interface -->
-            <div id="standardAddSection">
-                <div class="flex">
-                    <div class="form-group">
-                        <label for="nodeName">Node Name:</label>
-                        <input type="text" id="nodeName" placeholder="Enter node name" onkeypress="if(event.key==='Enter') addNode()">
-                    </div>
-                    <div class="form-group">
-                        <label for="nodeAddrs">Addresses (comma-separated):</label>
-                        <input type="text" id="nodeAddrs" placeholder="192.168.1.1,10.0.0.1" onkeypress="if(event.key==='Enter') addNode()">
-                    </div>
-                    <div>
-                        <button class="btn" onclick="addNode()">Add Node</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="nodeData">Node Data (JSON):</label>
-                    <textarea id="nodeData" placeholder='{"role": "web-server", "environment": "production", "cpu_cores": 4}' style="height: 80px; font-family: monospace;"></textarea>
-                    <small style="color: #666; font-size: 12px;">Optional: Add JSON metadata for this node (e.g., server config, deployment info, tags)</small>
-                </div>
-            </div>
+                        <!-- Standard Add Interface -->
+                        <div id="standardAddSection">
+                            <div class="flex">
+                                <div class="form-group">
+                                    <label for="nodeName">Name:</label>
+                                    <input type="text" id="nodeName" placeholder="node name" onkeypress="if(event.key==='Enter') addNode()">
+                                </div>
+                                <div class="form-group">
+                                    <label for="nodeAddrs">Addresses:</label>
+                                    <input type="text" id="nodeAddrs" placeholder="10.0.0.1,..." onkeypress="if(event.key==='Enter') addNode()">
+                                </div>
+                                <div>
+                                    <button class="btn" onclick="addNode()">Add</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="nodeData">Data (JSON):</label>
+                                <textarea id="nodeData" placeholder='{"role":"web"}' style="height: 40px; font-family: monospace; font-size: 0.7rem;"></textarea>
+                            </div>
+                        </div>
 
-            <div class="node-list" id="nodeList">
-                <p>Select a mesh to view nodes</p>
-            </div>
-        </div>
-
-        <!-- Hub Management -->
-        <div class="section">
-            <h2>Hub Management</h2>
-            <div class="flex">
-                <div class="form-group">
-                    <label for="hubNodeSelect">Select Node to Make Hub:</label>
-                    <select id="hubNodeSelect">
-                        <option value="">Select a node</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <div>
-                        <button class="btn" onclick="createHub()">Create Hub</button>
-                        <button class="btn" onclick="loadHubs()">Refresh Hubs</button>
+                        <div class="node-list" id="nodeList">
+                            <p>No nodes</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="hub-list" id="hubList">
-                <p>Create hubs or refresh to view</p>
-            </div>
-        </div>
+                <!-- Right Column -->
+                <div>
+                    <!-- Hub Management -->
+                    <div class="section">
+                        <h2>Hubs</h2>
+                        <div class="flex">
+                            <div class="form-group">
+                                <label for="hubNodeSelect">Node:</label>
+                                <select id="hubNodeSelect">
+                                    <option value="">Select node</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div>
+                                    <button class="btn" onclick="createHub()">Create</button>
+                                    <button class="btn" onclick="loadHubs()">Refresh</button>
+                                </div>
+                            </div>
+                        </div>
 
-        <!-- Link Management -->
-        <div class="section">
-            <h2>Link Management</h2>
-            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-                💡 <strong>Tip:</strong> Click on nodes/hubs above to auto-select them, or use dropdowns below
-            </p>
-            <div class="flex">
-                <div class="form-group">
-                    <label for="linkNodeSelect">Select Node:</label>
-                    <select id="linkNodeSelect">
-                        <option value="">Select a node</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="linkHubSelect">Select Hub:</label>
-                    <select id="linkHubSelect">
-                        <option value="">Select a hub</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <div>
-                        <button class="btn btn-success" onclick="linkToHub()">Link to Hub</button>
-                        <button class="btn btn-danger" onclick="unlinkFromHub()">Unlink from Hub</button>
+                        <div class="hub-list" id="hubList">
+                            <p>No hubs</p>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        </div>
 
-        <!-- Hub Topology Tab -->
-        <div id="topologyTab" class="tab-content" style="display: none;">
-            <!-- Hub Connection Management -->
-            <div class="section">
-                <h2>Hub-to-Hub Connections</h2>
-                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
-                    💡 <strong>Tip:</strong> Click on hubs in the Hub Management tab to auto-select them here
-                </p>
-                <div class="flex">
-                    <div class="form-group">
-                        <label for="sourceHubSelect">Source Hub:</label>
-                        <select id="sourceHubSelect">
-                            <option value="">Select source hub</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="targetHubSelect">Target Hub:</label>
-                        <select id="targetHubSelect">
-                            <option value="">Select target hub</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>&nbsp;</label>
-                        <div>
-                            <button class="btn btn-success" onclick="connectHubs()">Connect Hubs</button>
-                            <button class="btn btn-danger" onclick="disconnectHubs()">Disconnect Hubs</button>
+                    <!-- Link Management -->
+                    <div class="section">
+                        <h2>Links</h2>
+                        <div class="flex">
+                            <div class="form-group">
+                                <label for="linkNodeSelect">Node:</label>
+                                <select id="linkNodeSelect">
+                                    <option value="">Select node</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="linkHubSelect">Hub:</label>
+                                <select id="linkHubSelect">
+                                    <option value="">Select hub</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div>
+                                    <button class="btn btn-success" onclick="linkToHub()">Link</button>
+                                    <button class="btn btn-danger" onclick="unlinkFromHub()">Unlink</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Hub Topology Display -->
-            <div class="section">
-                <h2>Hub Network Topology</h2>
-                <div id="hubTopologyList">
-                    <p>Select a mesh to view hub connections</p>
+        <!-- Hub Topology Tab -->
+        <div id="topologyTab" class="tab-content" style="display: none;">
+            <div class="grid-2col">
+                <!-- Hub Connection Management -->
+                <div class="section">
+                    <h2>Connections</h2>
+                    <div class="flex">
+                        <div class="form-group">
+                            <label for="sourceHubSelect">Source:</label>
+                            <select id="sourceHubSelect">
+                                <option value="">Select hub</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="targetHubSelect">Target:</label>
+                            <select id="targetHubSelect">
+                                <option value="">Select hub</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <div>
+                                <button class="btn btn-success" onclick="connectHubs()">Connect</button>
+                                <button class="btn btn-danger" onclick="disconnectHubs()">Disconnect</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hub Topology Display -->
+                <div class="section">
+                    <h2>Summary</h2>
+                    <div id="hubTopologyList">
+                        <p>No data</p>
+                    </div>
                 </div>
             </div>
         </div>
