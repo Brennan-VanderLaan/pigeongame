@@ -178,6 +178,27 @@ class NodeManager:
             data=json.loads(db_node.data) if db_node.data else {}
         )
 
+    async def update_node_data(self, mesh_id: UUID, node_id: UUID, new_data: Dict[str, Any]) -> Optional[NodeResponse]:
+        """Update the data payload of a node without affecting its connections"""
+        conditions = QueryHelper.node_by_id_and_mesh(node_id, mesh_id)
+        result = await self.db.execute(select(NodeDB).where(*conditions))
+        node = result.scalar_one_or_none()
+
+        if not node:
+            return None
+
+        # Update only the data field
+        node.data = json.dumps(new_data)
+        await self.db.commit()
+        await self.db.refresh(node)
+
+        return NodeResponse(
+            id=node.id,
+            name=node.name,
+            addrs=json.loads(node.addrs),
+            data=json.loads(node.data) if node.data else {}
+        )
+
     async def remove_node_from_mesh(self, mesh_id: UUID, node_id: UUID) -> bool:
         """Remove a node from the mesh"""
         conditions = QueryHelper.node_by_id_and_mesh(node_id, mesh_id)

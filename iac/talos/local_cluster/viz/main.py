@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import (
     MeshCreate, MeshResponse,
-    NodeCreate, NodeResponse,
+    NodeCreate, NodeResponse, NodeDataUpdate,
     HubCreate, HubResponse,
     LinkRequest, HubLinkRequest
 )
@@ -128,6 +128,34 @@ async def add_node_to_mesh(
         "mesh_id": str(mesh_id),
         "node_id": str(result.id),
         "node_name": result.name
+    })
+    return result
+
+@app.patch("/mesh/{mesh_id}/node/{node_id}", response_model=NodeResponse)
+async def update_node_data(
+    mesh_id: UUID,
+    node_id: UUID,
+    node_update: NodeDataUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update the data payload of a node without affecting its connections"""
+    logger.info("Updating node data", extra={
+        "mesh_id": str(mesh_id),
+        "node_id": str(node_id)
+    })
+    manager = MeshNetworkManager(db)
+    result = await manager.nodes.update_node_data(mesh_id, node_id, node_update.data)
+
+    if not result:
+        logger.warning("Failed to update node - not found in mesh", extra={
+            "mesh_id": str(mesh_id),
+            "node_id": str(node_id)
+        })
+        raise HTTPException(status_code=404, detail="Node not found in this mesh")
+
+    logger.info("Node data updated successfully", extra={
+        "mesh_id": str(mesh_id),
+        "node_id": str(node_id)
     })
     return result
 

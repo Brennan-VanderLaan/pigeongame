@@ -70,6 +70,9 @@ class NodeCreate(BaseModel):
     addrs: List[str]
     data: Optional[dict] = {}
 
+class NodeDataUpdate(BaseModel):
+    data: dict
+
 class NodeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -874,24 +874,13 @@ function updateNetworkGraph() {
         }
     });
 
-    // Click event to hide context menu
+    // Click event to hide context menu and show details
     network.on('click', function(params) {
         hideContextMenu();
 
         if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
-            const node = nodes.find(n => n.id === nodeId);
-            const hub = hubs.find(h => h.node_id === nodeId);
-
-            let info = `Node: ${node?.name || 'Unknown'}`;
-            if (hub) {
-                info += ` (Hub with ${hub.spokes.length} spokes`;
-                if (hub.connected_hubs && hub.connected_hubs.length > 0) {
-                    info += `, connected to ${hub.connected_hubs.length} other hubs`;
-                }
-                info += ')';
-            }
-            showMessage(info);
+            showDetailsPanel(nodeId);
         }
     });
 }
@@ -1193,23 +1182,125 @@ function removeHubFromMenu(hubId) {
 
 function viewNodeDetails(nodeId) {
     hideContextMenu();
+    showDetailsPanel(nodeId);
+}
+
+function showDetailsPanel(nodeId) {
     const node = nodes.find(n => n.id === nodeId);
     const hub = hubs.find(h => h.node_id === nodeId);
 
-    let details = `Name: ${node.name}\nID: ${node.id}\nAddresses: ${node.addrs.join(', ')}`;
+    if (!node) return;
 
-    if (node.data && Object.keys(node.data).length > 0) {
-        details += `\n\nData:\n${JSON.stringify(node.data, null, 2)}`;
-    }
+    const detailsPanel = document.getElementById('detailsPanel');
+    const detailsContent = document.getElementById('detailsContent');
+
+    let html = `
+        <div class="details-section">
+            <h4>${hub ? '🟠 Hub' : '🔵 Node'}</h4>
+            <div class="details-field">
+                <label>Name</label>
+                <div class="value">${node.name}</div>
+            </div>
+            <div class="details-field">
+                <label>ID</label>
+                <div class="value">${node.id}</div>
+            </div>
+            <div class="details-field">
+                <label>Addresses</label>
+                <div class="value">${node.addrs.join(', ')}</div>
+            </div>
+        </div>
+    `;
 
     if (hub) {
-        details += `\n\nHub Info:\nSpokes: ${hub.spokes.length}`;
-        if (hub.connected_hubs && hub.connected_hubs.length > 0) {
-            details += `\nConnected Hubs: ${hub.connected_hubs.map(h => h.name).join(', ')}`;
-        }
+        html += `
+            <div class="details-section">
+                <h4>Hub Information</h4>
+                <div class="details-field">
+                    <label>Hub ID</label>
+                    <div class="value">${hub.id}</div>
+                </div>
+                <div class="details-field">
+                    <label>Connected Spokes</label>
+                    <div class="value">${hub.spokes.length} node(s)${hub.spokes.length > 0 ? ': ' + hub.spokes.map(s => s.name).join(', ') : ''}</div>
+                </div>
+                ${hub.connected_hubs && hub.connected_hubs.length > 0 ? `
+                <div class="details-field">
+                    <label>Connected Hubs</label>
+                    <div class="value">${hub.connected_hubs.map(h => h.name).join(', ')}</div>
+                </div>
+                ` : ''}
+            </div>
+        `;
     }
 
-    alert(details);
+    html += `
+        <div class="details-section">
+            <h4>Node Data</h4>
+            <div class="details-field">
+                <label>JSON Data Payload</label>
+                <textarea id="nodeDataEdit">${JSON.stringify(node.data || {}, null, 2)}</textarea>
+                <small style="color: #666; font-size: 11px;">Edit the JSON data and click Update to save changes</small>
+            </div>
+            <div class="details-actions">
+                <button class="btn btn-success" onclick="updateNodeData('${nodeId}')">Update Data</button>
+                ${!hub ? `<button class="btn" onclick="quickMakeHub('${nodeId}')">Promote to Hub</button>` : ''}
+            </div>
+        </div>
+
+        <div class="details-section">
+            <h4>Actions</h4>
+            <div class="details-actions" style="padding-top: 0; border-top: none;">
+                ${hub ? `<button class="btn" onclick="removeHubFromMenu('${hub.id}')">Demote to Node</button>` : ''}
+                <button class="btn btn-danger" onclick="deleteNodeFromMenu('${nodeId}')">Delete ${hub ? 'Hub & ' : ''}Node</button>
+            </div>
+        </div>
+    `;
+
+    detailsContent.innerHTML = html;
+    detailsPanel.classList.remove('collapsed');
+}
+
+function closeDetailsPanel() {
+    const detailsPanel = document.getElementById('detailsPanel');
+    detailsPanel.classList.add('collapsed');
+}
+
+async function updateNodeData(nodeId) {
+    if (!currentMeshId) {
+        showMessage('No mesh selected', true);
+        return;
+    }
+
+    const dataTextarea = document.getElementById('nodeDataEdit');
+    let newData;
+
+    try {
+        newData = JSON.parse(dataTextarea.value);
+    } catch (e) {
+        showMessage('Invalid JSON: ' + e.message, true);
+        return;
+    }
+
+    try {
+        // Use PATCH to update only the data field without affecting connections
+        const response = await fetch(`${API_BASE}/mesh/${currentMeshId}/node/${nodeId}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ data: newData })
+        });
+
+        if (response.ok) {
+            showMessage('Node data updated successfully');
+            await selectMesh(currentMeshId);
+            showDetailsPanel(nodeId);
+        } else {
+            const error = await response.json();
+            showMessage('Failed to update node data: ' + (error.detail || 'Unknown error'), true);
+        }
+    } catch (error) {
+        showMessage('Error updating node data: ' + error.message, true);
+    }
 }
 
 // Direct linking functions for drag-and-drop
