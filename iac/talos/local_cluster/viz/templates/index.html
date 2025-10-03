@@ -20,6 +20,7 @@
 
     <div class="container">
         <h1>Mesh Network Visualizer</h1>
+        <p class="subtitle">IP over Avian Carriers - RFC 1149 Network Management</p>
 
         <!-- Messages at the top -->
         <div id="messages"></div>
@@ -29,6 +30,11 @@
             <h2>Network Topology Graph</h2>
             <div class="graph-with-details">
                 <div id="networkGraph"></div>
+                <div class="graph-controls">
+                    <button class="graph-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                    <button class="graph-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+                    <button class="graph-btn" onclick="fitGraph()" title="Fit to Screen">⊡</button>
+                </div>
                 <div id="detailsPanel" class="details-panel collapsed">
                     <div class="details-header">
                         <h3>Details</h3>

@@ -613,10 +613,24 @@ function updateNetworkGraph() {
         graphNodes.push({
             id: node.id,
             label: node.name,
-            color: isHub ? '#ff9500' : '#4285f4', // Orange for hubs, blue for nodes
+            color: {
+                background: isHub ? '#ff9500' : '#00d4ff',
+                border: isHub ? '#ffa500' : '#00a8cc',
+                highlight: {
+                    background: isHub ? '#ffb84d' : '#33ddff',
+                    border: isHub ? '#ffb84d' : '#00d4ff'
+                }
+            },
             shape: isHub ? 'hexagon' : 'dot',
-            size: isHub ? 25 : 15,
-            font: { color: 'black', size: 12 }
+            size: isHub ? 30 : 20,
+            font: {
+                color: '#ffffff',
+                size: 14,
+                face: 'arial',
+                background: 'rgba(0, 0, 0, 0.7)',
+                strokeWidth: 3,
+                strokeColor: '#000000'
+            }
         });
     });
 
@@ -632,13 +646,19 @@ function updateNetworkGraph() {
                     graphEdges.push({
                         from: hub.node_id,
                         to: connectedHub.node_id,
-                        color: { color: '#ff6b6b', highlight: '#ff0000' },
+                        color: { color: '#ef4444', highlight: '#ff0000' },
                         width: 3,
                         arrows: { to: { enabled: false } },
                         dashes: false,
-                        length: 500,  // Longer for hub-to-hub
+                        length: 500,
                         label: `${hubNode?.addrs[0] || hubNode?.name || ''} <----> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
-                        font: { size: 10, color: '#666', align: 'middle' }
+                        font: {
+                            size: 11,
+                            color: '#e5e7eb',
+                            align: 'middle',
+                            background: 'rgba(0, 0, 0, 0.8)',
+                            strokeWidth: 0
+                        }
                     });
                 }
             });
@@ -653,13 +673,19 @@ function updateNetworkGraph() {
                 graphEdges.push({
                     from: spoke.id,
                     to: hub.node_id,
-                    color: { color: '#4caf50', highlight: '#2e7d32' },
+                    color: { color: '#10b981', highlight: '#059669' },
                     width: 2,
                     arrows: { to: { enabled: true, scaleFactor: 0.5 } },
                     dashes: true,
-                    length: 250,  // Longer for spokes to show labels
+                    length: 250,
                     label: `${spokeNode?.addrs[0] || spokeNode?.name || ''} → ${hubNode?.addrs[0] || hubNode?.name || ''}`,
-                    font: { size: 10, color: '#666', align: 'middle' }
+                    font: {
+                        size: 11,
+                        color: '#e5e7eb',
+                        align: 'middle',
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        strokeWidth: 0
+                    }
                 });
             });
         }
@@ -684,16 +710,31 @@ function updateNetworkGraph() {
             dragNodes: true,
             dragView: true,
             zoomView: true,
-            navigationButtons: true
+            navigationButtons: false
         },
         nodes: {
-            borderWidth: 2,
-            shadow: true,
-            font: { size: 12, face: 'arial' }
+            borderWidth: 3,
+            shadow: {
+                enabled: true,
+                color: 'rgba(0, 212, 255, 0.5)',
+                size: 10,
+                x: 0,
+                y: 0
+            },
+            font: { size: 14, face: 'arial' }
         },
         edges: {
-            shadow: true,
+            shadow: {
+                enabled: true,
+                color: 'rgba(0, 0, 0, 0.5)',
+                size: 5,
+                x: 2,
+                y: 2
+            },
             smooth: { type: 'continuous' }
+        },
+        configure: {
+            enabled: false
         }
     };
 
@@ -1396,10 +1437,24 @@ function updateNetworkGraphIncremental() {
         const nodeData = {
             id: node.id,
             label: node.name,
-            color: isHub ? '#ff9500' : '#4285f4',
+            color: {
+                background: isHub ? '#ff9500' : '#00d4ff',
+                border: isHub ? '#ffa500' : '#00a8cc',
+                highlight: {
+                    background: isHub ? '#ffb84d' : '#33ddff',
+                    border: isHub ? '#ffb84d' : '#00d4ff'
+                }
+            },
             shape: isHub ? 'hexagon' : 'dot',
-            size: isHub ? 25 : 15,
-            font: { color: 'black', size: 12 }
+            size: isHub ? 30 : 20,
+            font: {
+                color: '#ffffff',
+                size: 14,
+                face: 'arial',
+                background: 'rgba(0, 0, 0, 0.7)',
+                strokeWidth: 3,
+                strokeColor: '#000000'
+            }
         };
 
         // Preserve position if it exists
@@ -1423,13 +1478,19 @@ function updateNetworkGraphIncremental() {
                     graphEdges.push({
                         from: hub.node_id,
                         to: connectedHub.node_id,
-                        color: { color: '#ff6b6b', highlight: '#ff0000' },
+                        color: { color: '#ef4444', highlight: '#ff0000' },
                         width: 3,
                         arrows: { to: { enabled: false } },
                         dashes: false,
-                        length: 500,  // Longer for hub-to-hub
+                        length: 500,
                         label: `${hubNode?.addrs[0] || hubNode?.name || ''} <-> ${connectedHubNode?.addrs[0] || connectedHubNode?.name || ''}`,
-                        font: { size: 12, color: '#666', align: 'middle' }
+                        font: {
+                            size: 11,
+                            color: '#e5e7eb',
+                            align: 'middle',
+                            background: 'rgba(0, 0, 0, 0.8)',
+                            strokeWidth: 0
+                        }
                     });
                 }
             });
@@ -1443,13 +1504,19 @@ function updateNetworkGraphIncremental() {
                 graphEdges.push({
                     from: spoke.id,
                     to: hub.node_id,
-                    color: { color: '#4caf50', highlight: '#2e7d32' },
+                    color: { color: '#10b981', highlight: '#059669' },
                     width: 2,
                     arrows: { to: { enabled: true, scaleFactor: 0.5 } },
                     dashes: true,
-                    length: 250,  // Longer for spokes to show labels
+                    length: 250,
                     label: `${spokeNode?.addrs[0] || spokeNode?.name || ''} → ${hubNode?.addrs[0] || hubNode?.name || ''}`,
-                    font: { size: 10, color: '#777', align: 'middle' }
+                    font: {
+                        size: 11,
+                        color: '#e5e7eb',
+                        align: 'middle',
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        strokeWidth: 0
+                    }
                 });
             });
         }
@@ -1478,6 +1545,27 @@ document.addEventListener('click', function(e) {
         hideContextMenu();
     }
 });
+
+// Graph control functions
+function zoomIn() {
+    if (network) {
+        const scale = network.getScale();
+        network.moveTo({ scale: scale * 1.2 });
+    }
+}
+
+function zoomOut() {
+    if (network) {
+        const scale = network.getScale();
+        network.moveTo({ scale: scale * 0.8 });
+    }
+}
+
+function fitGraph() {
+    if (network) {
+        network.fit({ animation: true });
+    }
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
