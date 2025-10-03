@@ -71,3 +71,6 @@ Order of operations:
     - timestamps and where we are, posture for elk stack later on [done]
     - update CLI to use common logging [done]
     - update main web application to use common logging [done]
+- dark theme [done]
+- compact ui [done]
+- remove fluffy text, respect reader's time [done]
