@@ -863,7 +863,12 @@ function updateNetworkGraph() {
         if (nodeId) {
             const node = nodes.find(n => n.id === nodeId);
             const hub = hubs.find(h => h.node_id === nodeId);
-            showContextMenu(params.pointer.DOM.x, params.pointer.DOM.y, node, hub);
+            // Get the canvas element position to convert canvas coordinates to page coordinates
+            const canvas = container.querySelector('canvas');
+            const rect = canvas.getBoundingClientRect();
+            const pageX = rect.left + params.pointer.DOM.x;
+            const pageY = rect.top + params.pointer.DOM.y;
+            showContextMenu(pageX, pageY, node, hub);
         } else {
             hideContextMenu();
         }
