@@ -1,0 +1,85 @@
+load("//tools/unity:unity.bzl", "unity_build", "unity_run")
+
+# Pigeon Game Unity project
+# Note: The Unity project is in "Pigeon Game" subdirectory (with space),
+# but we reference it from this BUILD file to avoid Bazel's issues with spaces in package names.
+
+unity_build(
+    name = "pigeon_game",
+    project_root = "Pigeon Game/ProjectSettings/ProjectVersion.txt",
+    srcs = glob([
+        "Pigeon Game/Assets/**/*",
+        "Pigeon Game/ProjectSettings/**/*",
+        "Pigeon Game/Packages/**/*",
+    ], exclude = [
+        "Pigeon Game/Library/**",
+        "Pigeon Game/.vs/**",
+        "Pigeon Game/Temp/**",
+        "Pigeon Game/Logs/**",
+        "Pigeon Game/obj/**",
+        "Pigeon Game/Build/**",
+        "Pigeon Game/Builds/**",
+        "**/*.meta",  # Exclude meta files for faster builds
+    ]),
+    build_method = "BuildScript.Build",
+    tags = ["manual"],
+)
+
+unity_run(
+    name = "pigeon_game_editor",
+    project_root = "Pigeon Game/ProjectSettings/ProjectVersion.txt",
+    srcs = glob([
+        "Pigeon Game/Assets/**/*",
+        "Pigeon Game/ProjectSettings/**/*",
+        "Pigeon Game/Packages/**/*",
+    ], exclude = [
+        "Pigeon Game/Library/**",
+        "Pigeon Game/.vs/**",
+        "Pigeon Game/Temp/**",
+        "Pigeon Game/Logs/**",
+        "Pigeon Game/obj/**",
+    ]),
+)
+
+# Platform-specific builds
+unity_build(
+    name = "pigeon_game_windows",
+    project_root = "Pigeon Game/ProjectSettings/ProjectVersion.txt",
+    srcs = glob([
+        "Pigeon Game/Assets/**/*",
+        "Pigeon Game/ProjectSettings/**/*",
+        "Pigeon Game/Packages/**/*",
+    ], exclude = [
+        "Pigeon Game/Library/**",
+        "Pigeon Game/.vs/**",
+        "Pigeon Game/Temp/**",
+        "Pigeon Game/Logs/**",
+        "Pigeon Game/obj/**",
+        "Pigeon Game/Build/**",
+        "Pigeon Game/Builds/**",
+    ]),
+    build_target = "Win64",
+    build_method = "BuildScript.BuildWindows",
+    tags = ["manual"],
+)
+
+unity_build(
+    name = "pigeon_game_linux",
+    project_root = "Pigeon Game/ProjectSettings/ProjectVersion.txt",
+    srcs = glob([
+        "Pigeon Game/Assets/**/*",
+        "Pigeon Game/ProjectSettings/**/*",
+        "Pigeon Game/Packages/**/*",
+    ], exclude = [
+        "Pigeon Game/Library/**",
+        "Pigeon Game/.vs/**",
+        "Pigeon Game/Temp/**",
+        "Pigeon Game/Logs/**",
+        "Pigeon Game/obj/**",
+        "Pigeon Game/Build/**",
+        "Pigeon Game/Builds/**",
+    ]),
+    build_target = "Linux64",
+    build_method = "BuildScript.BuildLinux",
+    tags = ["manual"],
+)

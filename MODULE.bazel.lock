@@ -194,6 +194,30 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "//tools/unity:extensions.bzl%unity": {
+      "general": {
+        "bzlTransitiveDigest": "A87yzGt80wVlo+HnQWm3/lTBmIanZ8EYfgyHM8jakPQ=",
+        "usagesDigest": "Bhmrx1PC2rW9U92eB71YKoT3HttsqTGqeVG592QYBrg=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "unity_toolchain": {
+            "repoRuleId": "@@//tools/unity:defs.bzl%unity_repository",
+            "attributes": {}
+          }
+        },
+        "moduleExtensionMetadata": {
+          "explicitRootModuleDirectDeps": [
+            "unity_toolchain"
+          ],
+          "explicitRootModuleDirectDevDeps": [],
+          "useAllRepos": "NO",
+          "reproducible": false
+        },
+        "recordedRepoMappingEntries": []
+      }
+    },
     "@@buildifier_prebuilt+//:defs.bzl%buildifier_prebuilt_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "y2GJUI2VOwO/vv3fwJwIPYNwcHBgaDeGXzvJQ5gZ/3Y=",

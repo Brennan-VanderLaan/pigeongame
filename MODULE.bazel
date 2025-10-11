@@ -47,3 +47,7 @@ oci.pull(
     platforms = ["linux/amd64"],
 )
 use_repo(oci, "alpine_linux_amd64", "python_linux_amd64")
+
+# Unity toolchain
+unity = use_extension("//tools/unity:extensions.bzl", "unity")
+use_repo(unity, "unity_toolchain")

@@ -1,0 +1,6 @@
+# Unity Bazel rules package
+
+exports_files([
+    "defs.bzl",
+    "unity.bzl",
+])
