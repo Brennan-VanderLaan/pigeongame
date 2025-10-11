@@ -1,0 +1,14 @@
+load(":py_web_app.bzl", "py_web_app")
+
+# Example Python web application using the py_web_app macro
+py_web_app(
+    name = "hello-world",
+    srcs = ["main.py"],
+    main = "main.py",
+    requirements_txt = "requirements.txt",
+    port = 8000,
+    visibility = ["//visibility:public"],
+)
+
+# Export the macro for use by other packages
+exports_files(["py_web_app.bzl"])

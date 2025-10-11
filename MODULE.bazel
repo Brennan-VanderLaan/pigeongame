@@ -8,6 +8,8 @@ bazel_dep(name = "rules_oci", version = "2.2.6")
 bazel_dep(name = "gazelle", version = "0.39.1")
 bazel_dep(name = "aspect_bazel_lib", version = "2.21.1")
 bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_python", version = "0.40.0")
+bazel_dep(name = "rules_uv", version = "0.88.0")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//k8s/cni:go.mod")
@@ -25,6 +27,13 @@ use_repo(zstd, "zstd_toolchains")
 
 register_toolchains("@zstd_toolchains//:all")
 
+# Python toolchain
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    configure_coverage_tool = True,
+    python_version = "3.13",
+)
+
 # OCI images
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
@@ -32,4 +41,9 @@ oci.pull(
     image = "alpine:latest",
     platforms = ["linux/amd64"],
 )
-use_repo(oci, "alpine_linux_amd64")
+oci.pull(
+    name = "python_linux_amd64",
+    image = "python:3.13-slim",
+    platforms = ["linux/amd64"],
+)
+use_repo(oci, "alpine_linux_amd64", "python_linux_amd64")

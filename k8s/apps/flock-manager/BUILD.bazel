@@ -1,0 +1,24 @@
+load("//k8s/apps/shared/python-base:py_web_app.bzl", "py_web_app")
+
+# Flock Manager - Mesh Network Visualization Web Application
+py_web_app(
+    name = "flock-manager",
+    srcs = [
+        "viz/main.py",
+        "viz/database.py",
+        "viz/logging_config.py",
+        "viz/mesh_cli.py",
+        "viz/mesh_manager.py",
+        "viz/models.py",
+        "viz/utils.py",
+    ],
+    main = "viz/main.py",
+    requirements_txt = "viz/requirements.txt",
+    data = [
+        "viz/static/css/style.css",
+        "viz/static/js/app.js",
+        "viz/templates/index.html",
+    ],
+    port = 8000,
+    visibility = ["//visibility:public"],
+)
