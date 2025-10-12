@@ -196,7 +196,7 @@
   "moduleExtensions": {
     "//tools/unity:extensions.bzl%unity": {
       "general": {
-        "bzlTransitiveDigest": "A87yzGt80wVlo+HnQWm3/lTBmIanZ8EYfgyHM8jakPQ=",
+        "bzlTransitiveDigest": "Bd55mv+vzAoHD3ziPnOvw4/vuN58v4K5Q0dK41lC36o=",
         "usagesDigest": "Bhmrx1PC2rW9U92eB71YKoT3HttsqTGqeVG592QYBrg=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
