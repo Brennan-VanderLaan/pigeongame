@@ -368,8 +368,18 @@ unity_build = rule(
 
 def _unity_run_impl(ctx):
     """Implementation for unity_run rule."""
-    if not UNITY_FOUND:
-        fail("Unity not found. Set UNITY_PATH environment variable or install Unity in a standard location.")
+
+    # Determine Unity path based on version or use detected one
+    unity_path = UNITY_PATH
+    if ctx.attr.unity_version:
+        # Search for specific Unity version
+        if UNITY_OS == "windows":
+            unity_path = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Unity.exe".format(ctx.attr.unity_version)
+        else:
+            unity_path = "/opt/Unity/Hub/Editor/{}/Editor/Unity".format(ctx.attr.unity_version)
+
+    if not unity_path and not UNITY_FOUND and not ctx.attr.unity_version:
+        fail("Unity not found. Set UNITY_PATH environment variable, install Unity in a standard location, or specify unity_version attribute.")
 
     # Get project root (parent of ProjectSettings directory)
     project_root = ctx.file.project_root.dirname.rsplit("/", 1)[0]
@@ -389,10 +399,17 @@ def _unity_run_impl(ctx):
 set "UNITY_EXE={unity_path}"
 set "PROJECT_PATH_REL={project_path}"
 
+REM Use BUILD_WORKING_DIRECTORY if set (bazel run), otherwise use current directory
+if defined BUILD_WORKING_DIRECTORY (
+    set "WORKSPACE_ROOT=%BUILD_WORKING_DIRECTORY%"
+) else (
+    set "WORKSPACE_ROOT=%CD%"
+)
+
 REM Convert relative project path to absolute
-pushd "%PROJECT_PATH_REL%" 2>nul
+pushd "%WORKSPACE_ROOT%\\%PROJECT_PATH_REL%" 2>nul
 if errorlevel 1 (
-    echo ERROR: Project path does not exist: %PROJECT_PATH_REL%
+    echo ERROR: Project path does not exist: %WORKSPACE_ROOT%\\%PROJECT_PATH_REL%
     exit /b 1
 )
 set "PROJECT_PATH=%CD%"
@@ -410,7 +427,7 @@ echo ========================================
     {scene_args} ^
     {extra_args}
 """.format(
-            unity_path = UNITY_PATH,
+            unity_path = unity_path,
             project_path = project_root,
             scene_args = scene_args,
             extra_args = " ^\n    ".join(["-{}".format(arg) for arg in ctx.attr.extra_unity_args]),
@@ -420,12 +437,20 @@ echo ========================================
 UNITY_EXE="{unity_path}"
 PROJECT_PATH_REL="{project_path}"
 
+# Use BUILD_WORKING_DIRECTORY if set (bazel run), otherwise use current directory
+if [ -n "$BUILD_WORKING_DIRECTORY" ]; then
+    WORKSPACE_ROOT="$BUILD_WORKING_DIRECTORY"
+else
+    WORKSPACE_ROOT="$(pwd)"
+fi
+
 # Convert relative project path to absolute
-if [ ! -d "$PROJECT_PATH_REL" ]; then
-    echo "ERROR: Project path does not exist: $PROJECT_PATH_REL"
+FULL_PROJECT_PATH="$WORKSPACE_ROOT/$PROJECT_PATH_REL"
+if [ ! -d "$FULL_PROJECT_PATH" ]; then
+    echo "ERROR: Project path does not exist: $FULL_PROJECT_PATH"
     exit 1
 fi
-PROJECT_PATH="$(cd "$PROJECT_PATH_REL" && pwd)"
+PROJECT_PATH="$(cd "$FULL_PROJECT_PATH" && pwd)"
 
 echo "========================================"
 echo "Launching Unity Editor"
@@ -439,7 +464,7 @@ echo "========================================"
     {scene_args} \\
     {extra_args}
 """.format(
-            unity_path = UNITY_PATH,
+            unity_path = unity_path,
             project_path = project_root,
             scene_args = scene_args,
             extra_args = " \\\n    ".join(["-{}".format(arg) for arg in ctx.attr.extra_unity_args]),
@@ -471,6 +496,9 @@ unity_run = rule(
         ),
         "scene": attr.string(
             doc = "Scene to open (optional)",
+        ),
+        "unity_version": attr.string(
+            doc = "Unity editor version to use (e.g., '6000.2.2f1'). If not specified, uses auto-detected Unity.",
         ),
         "extra_unity_args": attr.string_list(
             doc = "Additional arguments to pass to Unity",
@@ -567,5 +595,6 @@ def unity_project(name, project_path = ".", build_target = None, build_method = 
         name = name + "_editor",
         project_root = project_path + "/ProjectSettings/ProjectVersion.txt",
         srcs = srcs,
+        unity_version = unity_version,
         tags = tags,
     )
