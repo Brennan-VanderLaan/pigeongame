@@ -11,8 +11,9 @@ def _unity_repository_impl(repository_ctx):
     if not is_windows and not is_linux:
         fail("Unsupported OS: {}. Only Windows and Linux are supported.".format(os_name))
 
-    # Check for user-provided Unity path
+    # Check for user-provided Unity path or hub path
     unity_path = repository_ctx.os.environ.get("UNITY_PATH", "")
+    unity_hub_path = repository_ctx.os.environ.get("UNITY_HUB_PATH", "")
     unity_version = repository_ctx.os.environ.get("UNITY_VERSION", "")
 
     # Default search paths by platform
@@ -21,6 +22,12 @@ def _unity_repository_impl(repository_ctx):
 
     if is_windows:
         unity_exe = "Unity.exe"
+        # If hub path is provided, use it as the base
+        if unity_hub_path:
+            if unity_version:
+                search_paths.append("{}/{}/Editor/Unity.exe".format(unity_hub_path, unity_version))
+            search_paths.append("{}/*/Editor/Unity.exe".format(unity_hub_path))
+        # Default Windows paths
         if unity_version:
             search_paths.append("C:/Program Files/Unity/Hub/Editor/{}/Editor/Unity.exe".format(unity_version))
         search_paths.extend([
@@ -29,14 +36,23 @@ def _unity_repository_impl(repository_ctx):
         ])
     elif is_linux:
         unity_exe = "Unity"
+        home_dir = repository_ctx.os.environ.get("HOME", "")
+        # If hub path is provided, use it as the base
+        if unity_hub_path:
+            if unity_version:
+                search_paths.append("{}/{}/Editor/Unity".format(unity_hub_path, unity_version))
+            search_paths.append("{}/*/Editor/Unity".format(unity_hub_path))
+        # Default Linux paths
         if unity_version:
-            search_paths.append("/opt/Unity/Editor/{}/Editor/Unity".format(unity_version))
-            search_paths.append("~/Unity/Hub/Editor/{}/Editor/Unity".format(unity_version))
+            search_paths.append("/opt/Unity/Hub/Editor/{}/Editor/Unity".format(unity_version))
+            if home_dir:
+                search_paths.append("{}/Unity/Hub/Editor/{}/Editor/Unity".format(home_dir, unity_version))
         search_paths.extend([
-            "/opt/Unity/Editor/*/Editor/Unity",
-            "~/Unity/Hub/Editor/*/Editor/Unity",
-            "/usr/bin/unity-editor",
+            "/opt/Unity/Hub/Editor/*/Editor/Unity",
         ])
+        if home_dir:
+            search_paths.append("{}/Unity/Hub/Editor/*/Editor/Unity".format(home_dir))
+        search_paths.append("/usr/bin/unity-editor")
 
     # Try user-provided path first
     found_unity = ""
@@ -129,12 +145,14 @@ filegroup(
     # Create info file
     info_content = """# Unity toolchain information
 UNITY_PATH = "{unity_path}"
+UNITY_HUB_PATH = "{unity_hub_path}"
 UNITY_FOUND = {found}
 UNITY_OS = "{os}"
 UNITY_BUILTIN_PACKAGES_DIR = "{builtin_packages_dir}"
 UNITY_UPM_SERVER_DIR = "{upm_server_dir}"
 """.format(
         unity_path = found_unity,
+        unity_hub_path = unity_hub_path,
         found = "True" if found_unity else "False",
         os = "windows" if is_windows else "linux",
         builtin_packages_dir = builtin_packages_dir,
@@ -147,6 +165,6 @@ UNITY_UPM_SERVER_DIR = "{upm_server_dir}"
 
 unity_repository = repository_rule(
     implementation = _unity_repository_impl,
-    environ = ["UNITY_PATH", "UNITY_VERSION", "HOME"],
+    environ = ["UNITY_PATH", "UNITY_HUB_PATH", "UNITY_VERSION", "HOME"],
     local = True,
 )

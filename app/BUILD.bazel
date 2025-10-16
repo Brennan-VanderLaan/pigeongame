@@ -7,9 +7,4 @@ unity_project(
     project_path = "pigeon-game",
     build_method = "BuildScript.Build",
     unity_version = "6000.2.2f1",
-    packages = [
-        "textmeshpro",
-        "inputsystem",
-        "ugui",
-    ],
 )

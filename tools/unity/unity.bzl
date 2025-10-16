@@ -1,6 +1,6 @@
 """Bazel rules and macros for building and running Unity projects."""
 
-load("@unity_toolchain//:unity_info.bzl", "UNITY_BUILTIN_PACKAGES_DIR", "UNITY_FOUND", "UNITY_OS", "UNITY_PATH", "UNITY_UPM_SERVER_DIR")
+load("@unity_toolchain//:unity_info.bzl", "UNITY_BUILTIN_PACKAGES_DIR", "UNITY_FOUND", "UNITY_HUB_PATH", "UNITY_OS", "UNITY_PATH", "UNITY_UPM_SERVER_DIR")
 
 def _get_unity_wrapper():
     """Returns the appropriate Unity wrapper script based on platform."""
@@ -22,14 +22,25 @@ def _unity_build_impl(ctx):
     # Determine Unity path based on version or use detected one
     unity_path = UNITY_PATH
     upm_server_dir = UNITY_UPM_SERVER_DIR
+
+    # If unity_version is specified, construct the path
     if ctx.attr.unity_version:
-        # Search for specific Unity version
-        if UNITY_OS == "windows":
-            unity_path = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Unity.exe".format(ctx.attr.unity_version)
-            upm_server_dir = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Data/Resources/PackageManager/Server".format(ctx.attr.unity_version)
+        if UNITY_HUB_PATH:
+            # Use the provided Unity Hub path
+            if UNITY_OS == "windows":
+                unity_path = "{}/{}/Editor/Unity.exe".format(UNITY_HUB_PATH, ctx.attr.unity_version)
+                upm_server_dir = "{}/{}/Editor/Data/Resources/PackageManager/Server".format(UNITY_HUB_PATH, ctx.attr.unity_version)
+            else:
+                unity_path = "{}/{}/Editor/Unity".format(UNITY_HUB_PATH, ctx.attr.unity_version)
+                upm_server_dir = "{}/{}/Editor/Data/Resources/PackageManager/Server".format(UNITY_HUB_PATH, ctx.attr.unity_version)
         else:
-            unity_path = "/opt/Unity/Hub/Editor/{}/Editor/Unity".format(ctx.attr.unity_version)
-            upm_server_dir = "/opt/Unity/Hub/Editor/{}/Editor/Data/Resources/PackageManager/Server".format(ctx.attr.unity_version)
+            # Fall back to default paths
+            if UNITY_OS == "windows":
+                unity_path = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Unity.exe".format(ctx.attr.unity_version)
+                upm_server_dir = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Data/Resources/PackageManager/Server".format(ctx.attr.unity_version)
+            else:
+                unity_path = "/opt/Unity/Hub/Editor/{}/Editor/Unity".format(ctx.attr.unity_version)
+                upm_server_dir = "/opt/Unity/Hub/Editor/{}/Editor/Data/Resources/PackageManager/Server".format(ctx.attr.unity_version)
 
     if not unity_path or not UNITY_FOUND and not ctx.attr.unity_version:
         fail("Unity not found. Set UNITY_PATH environment variable, install Unity in a standard location, or specify unity_version attribute.")
@@ -205,6 +216,12 @@ echo Build completed at %DATE% %TIME% > "%OUTPUT_DIR_ABS%\\build_complete.txt"
         script_content = """#!/bin/bash
 set -e
 
+# Create a temp bin directory and symlink uname for Unity
+TEMP_BIN="$(pwd)/.unity_bin"
+mkdir -p "$TEMP_BIN"
+ln -sf /usr/bin/uname "$TEMP_BIN/uname"
+export PATH="$TEMP_BIN:$PATH"
+
 UNITY_EXE="{unity_path}"
 PROJECT_PATH_REL="{project_path}"
 BUILD_TARGET="{build_target}"
@@ -371,12 +388,21 @@ def _unity_run_impl(ctx):
 
     # Determine Unity path based on version or use detected one
     unity_path = UNITY_PATH
+
+    # If unity_version is specified, construct the path
     if ctx.attr.unity_version:
-        # Search for specific Unity version
-        if UNITY_OS == "windows":
-            unity_path = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Unity.exe".format(ctx.attr.unity_version)
+        if UNITY_HUB_PATH:
+            # Use the provided Unity Hub path
+            if UNITY_OS == "windows":
+                unity_path = "{}/{}/Editor/Unity.exe".format(UNITY_HUB_PATH, ctx.attr.unity_version)
+            else:
+                unity_path = "{}/{}/Editor/Unity".format(UNITY_HUB_PATH, ctx.attr.unity_version)
         else:
-            unity_path = "/opt/Unity/Hub/Editor/{}/Editor/Unity".format(ctx.attr.unity_version)
+            # Fall back to default paths
+            if UNITY_OS == "windows":
+                unity_path = "C:/Program Files/Unity/Hub/Editor/{}/Editor/Unity.exe".format(ctx.attr.unity_version)
+            else:
+                unity_path = "/opt/Unity/Hub/Editor/{}/Editor/Unity".format(ctx.attr.unity_version)
 
     if not unity_path and not UNITY_FOUND and not ctx.attr.unity_version:
         fail("Unity not found. Set UNITY_PATH environment variable, install Unity in a standard location, or specify unity_version attribute.")
