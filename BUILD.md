@@ -10,6 +10,7 @@ PigeonGame uses Bazel as its primary build system with remote caching and execut
 - Bazel 8.3.1 (installed via Bazelisk recommended)
 - Go 1.21+ (for local development)
 - Docker (for container builds)
+- Unity (optional - auto-detected or version-specified per target)
 
 ### Essential Commands
 ```bash
@@ -24,6 +25,10 @@ bazel run //k8s/apps/pisp-perf:client
 
 # Build CNI plugin (Linux only)
 bazel build //k8s/cni:pigeon-cni-image
+
+# Unity game commands
+bazel build //app:pigeon_game         # Build Unity game
+bazel run //app:pigeon_game_editor    # Launch Unity Editor
 ```
 
 ## Architecture
@@ -32,6 +37,7 @@ bazel build //k8s/cni:pigeon-cni-image
 - **Module**: `pigeon-game@0.0.0`
 - **Core Dependencies**: rules_go, rules_oci, aspect_bazel_lib
 - **Go Dependencies**: External packages resolved from `//k8s/cni:go.mod`
+- **Unity Support**: Custom Unity build rules in `//tools/unity`
 
 ### Build Configuration
 - **Remote Cache**: `grpcs://pigeonisp.buildbuddy.io` (10m timeout)
@@ -43,6 +49,20 @@ bazel build //k8s/cni:pigeon-cni-image
 
 ### Root Package (`//`)
 No build targets - BUILD files are manually maintained.
+
+### Unity Game (`//app`)
+Platform: Cross-platform (Windows, Linux)
+
+| Target | Type | Description |
+|--------|------|-------------|
+| `pigeon_game` | unity_build | Build Unity game for target platform |
+| `pigeon_game_editor` | unity_run | Launch Unity Editor with project |
+
+**Configuration**:
+- Unity version: `6000.2.2f1` (specified in BUILD file)
+- Project path: `app/pigeon-game`
+- Build method: `BuildScript.Build`
+- Auto-detects Unity installation or uses specified version
 
 ### CNI Package (`//k8s/cni`)
 Platform: Linux only
@@ -74,10 +94,11 @@ Platform: Cross-platform
 ## Platform Support
 
 ### Linux
-Full support for all targets including CNI networking components.
+Full support for all targets including CNI networking components and Unity builds.
 
-### Windows  
-Limited support:
+### Windows
+Mixed support:
+- ✅ Unity game builds and editor
 - ✅ Performance testing tools (`pisp-perf`)
 - ❌ CNI networking (Linux networking APIs required)
 - ℹ️  CNI targets show helpful error messages on Windows
@@ -88,6 +109,27 @@ Limited support:
 bazel build --platforms=@platforms//os:linux //k8s/cni:pigeon-cni
 ```
 
+## Unity Integration
+
+### Unity Rules
+The project includes custom Unity build rules in `//tools/unity` that provide:
+- **Auto-detection**: Automatically finds Unity installations
+- **Version management**: Specify Unity version per target or globally
+- **Build automation**: Command-line builds for CI/CD
+- **Editor integration**: Launch Unity Editor from Bazel
+
+### Unity Build System
+- **Build Script**: Located at `app/pigeon-game/Assets/Editor/BuildScript.cs`
+- **Supported Platforms**: Windows (Win64), Linux (Linux64)
+- **Build Methods**: Generic `Build()` or platform-specific methods
+- **Output**: Built games placed in `bazel-bin/app/pigeon_game_output/`
+
+### Unity Configuration
+Environment variables (optional):
+- `UNITY_PATH`: Direct path to Unity executable
+- `UNITY_HUB_PATH`: Path to Unity Hub installations folder
+- `UNITY_VERSION`: Default Unity version to use
+
 ## Development Workflows
 
 ### Adding New Targets
@@ -95,6 +137,11 @@ bazel build --platforms=@platforms//os:linux //k8s/cni:pigeon-cni
 2. Libraries use `-lib` suffix: `component-name-lib`
 3. Add convenience aliases for common operations: `run`, `build`, `test`
 4. Use `target_compatible_with` for platform restrictions
+
+### Unity Development
+1. **Edit in Unity**: `bazel run //app:pigeon_game_editor`
+2. **Build game**: `bazel build //app:pigeon_game`
+3. **Specify Unity version**: Add `unity_version = "6000.2.2f1"` to target
 
 
 
@@ -176,8 +223,9 @@ build_system: bazel
 version: 7.x
 remote_cache: pigeonisp.buildbuddy.io
 platforms: [linux, windows]
-languages: [go]
+languages: [go, csharp]
 container_runtime: oci
+game_engine: unity
 -->
 
 ### Targets Schema
@@ -186,13 +234,19 @@ packages:
   - name: "root"
     path: "//"
     targets: []
-    
+
+  - name: "app"
+    path: "//app"
+    platform_requirements: ["cross-platform"]
+    targets: ["pigeon_game", "pigeon_game_editor"]
+    unity_version: "6000.2.2f1"
+
   - name: "cni"
     path: "//k8s/cni"
     platform_requirements: ["linux"]
     targets: ["pigeon-cni-lib", "pigeon-cni", "pigeon-cni-image"]
-    
-  - name: "pisp-perf" 
+
+  - name: "pisp-perf"
     path: "//k8s/apps/pisp-perf"
     platform_requirements: ["cross-platform"]
     targets: ["pisp-perf-lib", "pisp-perf", "server", "client", "run"]

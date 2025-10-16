@@ -35,6 +35,10 @@ bazel build //...
 # Run performance test
 bazel run //k8s/apps/pisp-perf:server
 bazel run //k8s/apps/pisp-perf:client
+
+# Unity game (experimental)
+bazel build //app:pigeon_game         # Build Unity game
+bazel run //app:pigeon_game_editor    # Launch Unity Editor
 ```
 
 Full build documentation: [BUILD.md](BUILD.md)
