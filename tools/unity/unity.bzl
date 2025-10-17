@@ -85,9 +85,6 @@ REM Ensure Unity cache directories exist
 if not exist "%LOCALAPPDATA%\\Unity" mkdir "%LOCALAPPDATA%\\Unity"
 if not exist "%LOCALAPPDATA%\\Unity\\cache" mkdir "%LOCALAPPDATA%\\Unity\\cache"
 
-REM Add Unity's UPM server and all its subdirectories to PATH so all UPM dependencies are accessible
-set "PATH={upm_server_dir};{upm_server_dir}\\app;{upm_server_dir}\\bin;{upm_server_dir}\\node_modules;%PATH%"
-
 REM Save the execroot directory for resolving relative paths
 set "EXECROOT=%CD%"
 
